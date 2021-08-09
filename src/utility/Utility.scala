@@ -1,6 +1,6 @@
 package utility
 
-import picture.{Picture, Pixel}
+import picture.{Picture, Pixel, PixelValueScaler}
 
 import java.io.File
 import javax.imageio.ImageIO
@@ -20,7 +20,7 @@ object Utility {
       val red = (color & 0xff0000) / 65536
       val green = (color & 0xff00) / 256
       val blue = (color & 0xff)
-      picture.pixels(y)(x) = new Pixel(red, green, blue)
+      picture.pixels(y)(x) = PixelValueScaler.scaleFrom8BitToZeroToOne(red, green, blue)
     }
 
     picture

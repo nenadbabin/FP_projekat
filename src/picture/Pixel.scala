@@ -6,9 +6,9 @@ class Pixel (red: Double,
 
   def this(color: Double) = this(color, color, color)
 
-  val r: Double = if (red < Pixel.VAL_MIN) 0 else if (red > Pixel.VAL_MAX) 1 else red
-  val g: Double = if (green < Pixel.VAL_MIN) 0 else if (green > Pixel.VAL_MAX) 1 else green
-  val b: Double = if (blue < Pixel.VAL_MIN) 0 else if (blue > Pixel.VAL_MAX) 1 else blue
+  val r: Double = if (red < Pixel.VAL_MIN) Pixel.VAL_MIN else if (red > Pixel.VAL_MAX) Pixel.VAL_MAX else red
+  val g: Double = if (green < Pixel.VAL_MIN) Pixel.VAL_MIN else if (green > Pixel.VAL_MAX) Pixel.VAL_MAX else green
+  val b: Double = if (blue < Pixel.VAL_MIN) Pixel.VAL_MIN else if (blue > Pixel.VAL_MAX) Pixel.VAL_MAX else blue
 
   private def genericArithmeticOperation (operation: (Double, Double) => Double)(const: Double): Pixel = {
     def genericInner (const: Double): Pixel = {
@@ -91,5 +91,5 @@ class Pixel (red: Double,
 
 object Pixel {
   val VAL_MIN: Double = 0.0
-  val VAL_MAX: Double = 255.0
+  val VAL_MAX: Double = 1.0
 }
