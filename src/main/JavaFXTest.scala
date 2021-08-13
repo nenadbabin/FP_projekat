@@ -7,16 +7,13 @@ import javafx.collections.{FXCollections, ObservableList}
 import javafx.event.{ActionEvent, EventHandler}
 import javafx.geometry.{Insets, Pos}
 import javafx.scene.canvas.Canvas
-import javafx.scene.control.{Button, ComboBox, Label, RadioButton, TextField, ToggleGroup}
-import javafx.scene.image.PixelWriter
+import javafx.scene.control._
 import javafx.scene.layout.{BorderPane, HBox, Pane, VBox}
-import javafx.scene.paint.Color
 import javafx.scene.{Group, Node, Scene}
 import javafx.stage.{FileChooser, Stage}
 import layer.Layer
-import picture.{Picture, Pixel}
-import selection.Selection
-import utility.{HW, Point, Rectangle, Utility}
+import picture.Picture
+import utility.Utility
 
 import java.io.File
 
