@@ -110,10 +110,21 @@ class JavaFXTest extends Application {
     // Change transparency
     val applyTransparencyEvent: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
-        val layerTransparency: Double = transparencyValueField.getText.toDouble
-        val layerName: String = activeLayerName.getText
-        homeController.findLayerByName(layerName).transparency = layerTransparency
-        setNewCanvas(homeController.draw())
+        try {
+          val layerTransparency: Double = transparencyValueField.getText.toDouble
+          val layerName: String = activeLayerName.getText
+          val layer: Layer = homeController.findLayerByName(layerName)
+          if (layer != null) {
+            if (layerTransparency >= 0.0 && layerTransparency <= 1.0) {
+              layer.transparency = layerTransparency
+              setNewCanvas(homeController.draw())
+            } else {
+              // TODO: Print error to logger
+            }
+          }
+        } catch {
+          case e : NumberFormatException => return // TODO: Print error to logger
+        }
       }
     }
     applyTransparencyButton.setOnAction(applyTransparencyEvent)
