@@ -1,18 +1,24 @@
 package main
 
+import controller.HomeController
 import javafx.application.Application
+import javafx.beans.value.{ChangeListener, ObservableValue}
 import javafx.collections.{FXCollections, ObservableList}
+import javafx.event.{ActionEvent, EventHandler}
 import javafx.geometry.{Insets, Pos}
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.{Button, ComboBox, Label, RadioButton, TextField, ToggleGroup}
 import javafx.scene.image.PixelWriter
-import javafx.scene.layout.{BorderPane, HBox, VBox}
+import javafx.scene.layout.{BorderPane, HBox, Pane, VBox}
 import javafx.scene.paint.Color
-import javafx.scene.{Group, Scene}
-import javafx.stage.Stage
+import javafx.scene.{Group, Node, Scene}
+import javafx.stage.{FileChooser, Stage}
+import layer.Layer
 import picture.{Picture, Pixel}
 import selection.Selection
 import utility.{HW, Point, Rectangle, Utility}
+
+import java.io.File
 
 
 object JavaFXTest {
@@ -22,54 +28,57 @@ object JavaFXTest {
 }
 
 class JavaFXTest extends Application {
+
+  val homeController: HomeController = new HomeController()
+  val bPane = new BorderPane()
+
+  private def setNewCanvas(pane: Pane): Unit = {
+    bPane.setCenter(null)
+    bPane.setCenter(pane)
+  }
+
   override def start(primaryStage: Stage): Unit = {
     primaryStage.setTitle("PhotoEditor")
     val root = new Group()
     val canvas = new Canvas()
 
-    val bPane = new BorderPane()
     bPane.setCenter(canvas)
-    bPane.setTop(this.createTopPane());
-    bPane.setBottom(new TextField("Logger..."));
-    bPane.setLeft(this.createLeftPane());
-    bPane.setRight(this.createRightPane());
+    bPane.setTop(this.createTopPane())
+    bPane.setBottom(new TextField("Logger..."))
+    bPane.setLeft(this.createLeftPane(canvas))
+    bPane.setRight(this.createRightPane())
 
-    val picture: Picture = Utility.readPictureFromFile("pictures/lena.jpg")
-
-    canvas.setWidth(picture.dim.width)
-    canvas.setHeight(picture.dim.height)
-
-    println(picture.dim)
-
-    val pixelWriter: PixelWriter = canvas.getGraphicsContext2D.getPixelWriter
-
-    val rect1: Rectangle = new Rectangle(new Point(0,0), new HW(256,256))
-    val rect2: Rectangle = new Rectangle(new Point(256,256), new HW(256,256))
-    val rect_list: List[Rectangle] = List[Rectangle](rect1, rect2)
-    val selection: Selection = new Selection("sel_1", rect_list)
-
-    for (rect <- selection.rectangles) {
-      picture.toGrayscale(rect.topLeftCorner, rect.dim)
-    }
-
-    for (y <- 0 until picture.dim.height;
-         x <- 0 until picture.dim.width) {
-      val pixel: Pixel = picture.pixels(y)(x)
-      val r = pixel.r
-      val g = pixel.g
-      val b = pixel.b
-      pixelWriter.setColor(x, y, new Color(r, g, b, 1))
-    }
+    canvas.setWidth(512)
+    canvas.setHeight(512)
 
     root.getChildren.add(bPane)
     primaryStage.setScene(new Scene(root))
     primaryStage.show()
   }
 
-  def createLeftPane(): VBox = {
+  def createLeftPane(canvas: Canvas): VBox = {
     val addLayerButton = new Button("Add layer...")
-    val options: ObservableList[String] = FXCollections.observableArrayList("Option 1", "Option 2", "Option 3")
+
+    val options: ObservableList[String] = FXCollections.observableArrayList()
     val layersComboBox = new ComboBox[String](options)
+
+    // Add listener for creating new layer (opening picture)
+    val event: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        val fileChooser: FileChooser = new FileChooser()
+        fileChooser.setTitle("Open picture...")
+        val stage: Stage = (e.getSource.asInstanceOf[Node]).getScene.getWindow.asInstanceOf[Stage]
+        val file: File = fileChooser.showOpenDialog(stage)
+        if (file != null) {
+          val picture: Picture = Utility.readPictureFromFile(file)
+          val new_layer: Layer = new Layer(picture, file.getName)
+          homeController.add_layer(new_layer)
+          setNewCanvas(homeController.draw())
+          options.add(new_layer.name)
+        }
+      }
+    }
+    addLayerButton.setOnAction(event)
 
     val leftPane = new VBox()
 
@@ -79,15 +88,64 @@ class JavaFXTest extends Application {
     activeLayer.setAlignment(Pos.CENTER)
 
     val transparency = new HBox()
-    val transparencyValueField = new TextField("0.1")
+    val transparencyValueField = new TextField("")
     transparencyValueField.setMaxWidth(35)
     transparency.getChildren.addAll(new Label("Transparency: "), transparencyValueField)
     transparency.setAlignment(Pos.CENTER)
 
+
+    val applyTransparencyButton = new Button()
+    applyTransparencyButton.setText("Apply transparency")
     val moveUpButton = new Button()
     moveUpButton.setText("Move up")
     val moveDownButton = new Button()
     moveDownButton.setText("Move down")
+
+    // Add listener for layer selection change
+    layersComboBox.valueProperty.addListener(new ChangeListener[String]() {
+      override def changed(observable: ObservableValue[_ <: String], oldValue: String, newValue: String): Unit = {
+        val layer: Layer = homeController.findLayerByName(newValue)
+        transparencyValueField.setText(layer.transparency.toString)
+        activeLayerName.setText(layer.name)
+      }
+    })
+
+    // Change transparency
+    val applyTransparencyEvent: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        val layerTransparency: Double = transparencyValueField.getText.toDouble
+        val layerName: String = activeLayerName.getText
+        homeController.findLayerByName(layerName).transparency = layerTransparency
+        setNewCanvas(homeController.draw())
+      }
+    }
+    applyTransparencyButton.setOnAction(applyTransparencyEvent)
+
+    // Move layer backwards
+    val moveLayerBackwards: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        val layerName: String = activeLayerName.getText
+        val layer: Layer = homeController.findLayerByName(layerName)
+        if (layer != null) {
+          homeController.moveLayerBackwards(layer)
+          setNewCanvas(homeController.draw())
+        }
+      }
+    }
+    moveDownButton.setOnAction(moveLayerBackwards)
+
+    // Move layer forwards
+    val moveLayerForwards: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        val layerName: String = activeLayerName.getText
+        val layer: Layer = homeController.findLayerByName(layerName)
+        if (layer != null) {
+          homeController.moveLayerForwards(layer)
+          setNewCanvas(homeController.draw())
+        }
+      }
+    }
+    moveUpButton.setOnAction(moveLayerForwards)
 
     leftPane.setAlignment(Pos.CENTER)
     VBox.setMargin(addLayerButton, new Insets(10, 20, 10, 20))
@@ -95,10 +153,11 @@ class JavaFXTest extends Application {
     VBox.setMargin(layersComboBox, new Insets(10, 20, 5, 20))
     VBox.setMargin(activeLayer, new Insets(5, 20, 5, 20))
     VBox.setMargin(transparency, new Insets(5, 20, 5, 20))
+    VBox.setMargin(applyTransparencyButton, new Insets(5, 20, 5, 20))
     VBox.setMargin(moveUpButton, new Insets(5, 20, 5, 20))
     VBox.setMargin(moveDownButton, new Insets(5, 20, 10, 20))
 
-    leftPane.getChildren.addAll(addLayerButton, layersComboBox, activeLayer, transparency, moveUpButton, moveDownButton)
+    leftPane.getChildren.addAll(addLayerButton, layersComboBox, activeLayer, transparency, applyTransparencyButton, moveUpButton, moveDownButton)
 
     leftPane
   }

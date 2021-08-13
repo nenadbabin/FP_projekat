@@ -19,6 +19,6 @@ object Main extends App {
 }
 
 object MainTestReadJPG extends App {
-  val picture: Picture = Utility.readPictureFromFile("pictures/lena.jpg")
+  val picture: Picture = Utility.readPictureFromPath("pictures/lena.jpg")
   println(picture)
 }

@@ -2,13 +2,22 @@ package utility
 
 import picture.{Picture, Pixel, PixelValueScaler}
 
+import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 
 object Utility {
-  def readPictureFromFile(path: String): Picture = {
-    val img = ImageIO.read(new File(path))
+  def readPictureFromPath(path: String): Picture = {
+    val file: File = new File(path)
+    readPictureFromFile(file)
+  }
 
+  def readPictureFromFile(file: File): Picture = {
+    val img: BufferedImage = ImageIO.read(file)
+    readPictureFromBufferedImage(img)
+  }
+
+  def readPictureFromBufferedImage(img: BufferedImage): Picture = {
     val w = img.getWidth
     val h = img.getHeight
 
