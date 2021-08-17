@@ -1,19 +1,23 @@
 package main
 
-import controller.HomeController
+import controller.{LayersController, SelectionDrawController, SelectionsController}
 import javafx.application.Application
 import javafx.beans.value.{ChangeListener, ObservableValue}
 import javafx.collections.{FXCollections, ObservableList}
 import javafx.event.{ActionEvent, EventHandler}
 import javafx.geometry.{Insets, Pos}
 import javafx.scene.canvas.Canvas
-import javafx.scene.control._
-import javafx.scene.layout.{BorderPane, HBox, Pane, VBox}
+import javafx.scene.control.{ColorPicker, TextInputDialog, _}
+import javafx.scene.input.MouseEvent
+import javafx.scene.layout._
+import javafx.scene.paint.{Color, Paint}
+import javafx.scene.shape.{Rectangle => JavaFXRectangle}
 import javafx.scene.{Group, Node, Scene}
 import javafx.stage.{FileChooser, Stage}
 import layer.Layer
 import picture.Picture
-import utility.Utility
+import selection.Selection
+import utility.{HW, Point, Rectangle, Utility}
 
 import java.io.File
 
@@ -26,34 +30,129 @@ object JavaFXTest {
 
 class JavaFXTest extends Application {
 
-  val homeController: HomeController = new HomeController()
+  // Controllers
+  val layersController: LayersController = new LayersController()
+  val selectionDrawController: SelectionDrawController = new SelectionDrawController()
+  val selectionsController: SelectionsController = new SelectionsController()
+
   val bPane = new BorderPane()
+  val canvasOverlay = new Canvas()
+
+  var isUserDrawingSelections: Boolean = false
+  var drawnRectangles: List[Rectangle] = List[Rectangle]()
 
   private def setNewCanvas(pane: Pane): Unit = {
+    val paneHeight = pane.getChildren.get(0).asInstanceOf[Canvas].getHeight
+    val paneWidth = pane.getChildren.get(0).asInstanceOf[Canvas].getWidth
+
+    canvasOverlay.setHeight(paneHeight)
+    canvasOverlay.setWidth(paneWidth)
+
+    val holder: StackPane = new StackPane()
+    for (i <- 0 until pane.getChildren.size()) {
+      holder.getChildren.add(pane.getChildren.get(0))
+    }
+    holder.getChildren.add(canvasOverlay)
+
     bPane.setCenter(null)
-    bPane.setCenter(pane)
+    bPane.setCenter(holder)
+  }
+
+  private def clearDrawingCanvas(): Unit = {
+    val gc = canvasOverlay.getGraphicsContext2D
+    gc.clearRect(0, 0, canvasOverlay.getWidth, canvasOverlay.getHeight)
   }
 
   override def start(primaryStage: Stage): Unit = {
     primaryStage.setTitle("PhotoEditor")
     val root = new Group()
-    val canvas = new Canvas()
 
-    bPane.setCenter(canvas)
+    bPane.setCenter(canvasOverlay)
     bPane.setTop(this.createTopPane())
     bPane.setBottom(new TextField("Logger..."))
-    bPane.setLeft(this.createLeftPane(canvas))
+    bPane.setLeft(this.createLeftPane())
     bPane.setRight(this.createRightPane())
 
-    canvas.setWidth(512)
-    canvas.setHeight(512)
+    canvasOverlay.setWidth(512)
+    canvasOverlay.setHeight(512)
+
+    canvasOverlay.setOnMousePressed((event: MouseEvent) => {
+      def foo(event: MouseEvent) = {
+        if (isUserDrawingSelections) {
+          if (selectionDrawController.new_rectangle_is_being_drawn == false) {
+            selectionDrawController.starting_point_x = event.getX
+            selectionDrawController.starting_point_y = event.getY
+            selectionDrawController.new_rectangle = new JavaFXRectangle
+            // A non-finished rectangle has always the same color.
+            selectionDrawController.new_rectangle.setFill(Color.SNOW) // almost white color
+
+            selectionDrawController.new_rectangle.setStroke(Color.BLACK)
+            selectionDrawController.group_for_rectangles.getChildren.add(selectionDrawController.new_rectangle)
+            selectionDrawController.new_rectangle_is_being_drawn = true
+          }
+        }
+      }
+
+      foo(event)
+    })
+    canvasOverlay.setOnMouseDragged((event: MouseEvent) => {
+      def foo(event: MouseEvent) = {
+        if (isUserDrawingSelections) {
+          if (selectionDrawController.new_rectangle_is_being_drawn == true) {
+            val current_ending_point_x = event.getX
+            val current_ending_point_y = event.getY
+            selectionDrawController.adjust_rectangle_properties(selectionDrawController.starting_point_x, selectionDrawController.starting_point_y, current_ending_point_x, current_ending_point_y, selectionDrawController.new_rectangle)
+            clearDrawingCanvas()
+            val gc = canvasOverlay.getGraphicsContext2D
+
+            for (r <- drawnRectangles)  {
+              val gc = canvasOverlay.getGraphicsContext2D
+              gc.strokeRoundRect(r.topLeftCorner.x, r.topLeftCorner.y, r.dim.width, r.dim.height, 1, 1)
+            }
+
+            gc.strokeRoundRect(selectionDrawController.new_rectangle.getX,
+              selectionDrawController.new_rectangle.getY,
+              selectionDrawController.new_rectangle.getWidth,
+              selectionDrawController.new_rectangle.getHeight, 1, 1)
+          }
+        }
+      }
+
+      foo(event)
+    })
+    canvasOverlay.setOnMouseReleased((event: MouseEvent) => {
+      def foo(event: MouseEvent) = {
+        if (isUserDrawingSelections) {
+          if (selectionDrawController.new_rectangle_is_being_drawn == true) { // Now the drawing of the new rectangle is finished.
+            // Let's set the final color for the rectangle.
+            selectionDrawController.new_rectangle.setFill(selectionDrawController.rectangle_colors(selectionDrawController.color_index))
+            selectionDrawController.color_index += 1 // Index for the next color to use.
+
+            // If all colors have been used we'll start re-using colors from the
+            // beginning of the array.
+            val x: Int = selectionDrawController.new_rectangle.getX.toInt
+            val y: Int = selectionDrawController.new_rectangle.getY.toInt
+            val height: Int = selectionDrawController.new_rectangle.getHeight.toInt
+            val width: Int = selectionDrawController.new_rectangle.getWidth.toInt
+            val rectToAdd: Rectangle = new Rectangle(new Point(x, y), new HW(height, width))
+            drawnRectangles = rectToAdd :: drawnRectangles
+
+            if (selectionDrawController.color_index >= selectionDrawController.rectangle_colors.length) selectionDrawController.color_index = 0
+            selectionDrawController.new_rectangle = null
+            selectionDrawController.new_rectangle_is_being_drawn = false
+          }
+        }
+      }
+
+      foo(event)
+    })
 
     root.getChildren.add(bPane)
     primaryStage.setScene(new Scene(root))
     primaryStage.show()
   }
 
-  def createLeftPane(canvas: Canvas): VBox = {
+  def createLeftPane(): VBox = {
     val addLayerButton = new Button("Add layer...")
 
     val options: ObservableList[String] = FXCollections.observableArrayList()
@@ -69,8 +168,8 @@ class JavaFXTest extends Application {
         if (file != null) {
           val picture: Picture = Utility.readPictureFromFile(file)
           val new_layer: Layer = new Layer(picture, file.getName)
-          homeController.add_layer(new_layer)
-          setNewCanvas(homeController.draw())
+          layersController.add_layer(new_layer)
+          setNewCanvas(layersController.drawLayers())
           options.add(new_layer.name)
         }
       }
@@ -101,7 +200,7 @@ class JavaFXTest extends Application {
     // Add listener for layer selection change
     layersComboBox.valueProperty.addListener(new ChangeListener[String]() {
       override def changed(observable: ObservableValue[_ <: String], oldValue: String, newValue: String): Unit = {
-        val layer: Layer = homeController.findLayerByName(newValue)
+        val layer: Layer = layersController.findLayerByName(newValue)
         transparencyValueField.setText(layer.transparency.toString)
         activeLayerName.setText(layer.name)
       }
@@ -113,11 +212,11 @@ class JavaFXTest extends Application {
         try {
           val layerTransparency: Double = transparencyValueField.getText.toDouble
           val layerName: String = activeLayerName.getText
-          val layer: Layer = homeController.findLayerByName(layerName)
+          val layer: Layer = layersController.findLayerByName(layerName)
           if (layer != null) {
             if (layerTransparency >= 0.0 && layerTransparency <= 1.0) {
               layer.transparency = layerTransparency
-              setNewCanvas(homeController.draw())
+              setNewCanvas(layersController.drawLayers())
             } else {
               // TODO: Print error to logger
             }
@@ -133,10 +232,10 @@ class JavaFXTest extends Application {
     val moveLayerBackwards: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         val layerName: String = activeLayerName.getText
-        val layer: Layer = homeController.findLayerByName(layerName)
+        val layer: Layer = layersController.findLayerByName(layerName)
         if (layer != null) {
-          homeController.moveLayerBackwards(layer)
-          setNewCanvas(homeController.draw())
+          layersController.moveLayerBackwards(layer)
+          setNewCanvas(layersController.drawLayers())
         }
       }
     }
@@ -146,10 +245,10 @@ class JavaFXTest extends Application {
     val moveLayerForwards: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         val layerName: String = activeLayerName.getText
-        val layer: Layer = homeController.findLayerByName(layerName)
+        val layer: Layer = layersController.findLayerByName(layerName)
         if (layer != null) {
-          homeController.moveLayerForwards(layer)
-          setNewCanvas(homeController.draw())
+          layersController.moveLayerForwards(layer)
+          setNewCanvas(layersController.drawLayers())
         }
       }
     }
@@ -171,28 +270,121 @@ class JavaFXTest extends Application {
   }
 
   def createRightPane(): VBox = {
-    val addSelectionButton = new Button("Add selection...")
-    val options: ObservableList[String] = FXCollections.observableArrayList("Option 1", "Option 2", "Option 3")
+
+    val addSelectionButton: Button = new Button("Add selection...")
+
+    val options: ObservableList[String] = FXCollections.observableArrayList("No selection")
+    val selection: Selection = new Selection("No selection", List[Rectangle]())
+    selectionsController.addSelection(selection)
     val selectionsComboBox = new ComboBox[String](options)
+
+    val selectionNameDialog: TextInputDialog = new TextInputDialog
+    selectionNameDialog.setHeaderText("Choose name for the new selection.")
+    selectionNameDialog.setTitle("Selection name")
+    selectionNameDialog.setGraphic(null)
+    val selectionDrawingEvent = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        if (!isUserDrawingSelections) {
+          selectionNameDialog.showAndWait
+          addSelectionButton.setText("Finish drawing")
+          isUserDrawingSelections = true
+          clearDrawingCanvas()
+        } else {
+          val selectionName: String = selectionNameDialog.getEditor.getText
+          options.add(selectionName)
+          val selection: Selection = new Selection(selectionName, drawnRectangles)
+          selectionsController.addSelection(selection)
+          addSelectionButton.setText("Add selection...")
+          isUserDrawingSelections = false
+          drawnRectangles = List[Rectangle]()
+          clearDrawingCanvas()
+        }
+
+      }
+    }
+    addSelectionButton.setOnAction(selectionDrawingEvent)
 
     val rightPane = new VBox()
 
     val activeSelection = new HBox()
-    val activeLayerName = new TextField()
-    activeLayerName.setMaxWidth(100)
-    activeSelection.getChildren.addAll(new Label("Selection name: "), activeLayerName)
+    val activeSelectionName = new Label("...")
+    activeSelection.getChildren.addAll(new Label("Selection name: "), activeSelectionName)
 
-    val activeSelect = new HBox()
-    val group = new ToggleGroup()
-    val rb1 = new RadioButton("Yes")
-    val rb2 = new RadioButton("No")
-    rb1.setToggleGroup(group)
-    rb2.setToggleGroup(group)
-    activeSelect.getChildren.addAll(new Label("Active: "), rb1, rb2)
-    activeSelect.setAlignment(Pos.CENTER)
+//    val activeSelect = new HBox()
+//    val group = new ToggleGroup()
+//    val rb1 = new RadioButton("Yes")
+//    val rb2 = new RadioButton("No")
+//    rb1.setToggleGroup(group)
+//    rb2.setToggleGroup(group)
+//    activeSelect.getChildren.addAll(new Label("Active: "), rb1, rb2)
+//    activeSelect.setAlignment(Pos.CENTER)
+//
+    selectionsComboBox.valueProperty.addListener(new ChangeListener[String]() {
+      override def changed(observable: ObservableValue[_ <: String], oldValue: String, newValue: String): Unit = {
+        val selection: Selection = selectionsController.findSelectionByName(newValue)
+        activeSelectionName.setText(selection.name)
+//        if (selection.active) rb1.setSelected(true)
+//        else rb2.setSelected(true)
+        clearDrawingCanvas()
+        val gc = canvasOverlay.getGraphicsContext2D
+        for (r <- selection.rectangles)  {
+          gc.strokeRoundRect(r.topLeftCorner.x, r.topLeftCorner.y, r.dim.width, r.dim.height, 1, 1)
+        }
+      }
+    })
+
+    val colorPicker: HBox = new HBox()
+    val redTxtFld: TextField = new TextField("0.0")
+    redTxtFld.setMaxWidth(35)
+    val greenTxtFld: TextField = new TextField("0.0")
+    greenTxtFld.setMaxWidth(35)
+    val blueTxtFld: TextField = new TextField("0.0")
+    blueTxtFld.setMaxWidth(35)
+    val colorPreview: JavaFXRectangle = new JavaFXRectangle(0, 0, 25, 25)
+    colorPreview.setFill(new Color(0, 0, 0, 1))
+    colorPreview.setStroke(Color.BLACK)
+
+    colorPicker.getChildren.addAll(redTxtFld, greenTxtFld, blueTxtFld, colorPreview)
+
+    val colorChangeListener: ChangeListener[String] = new ChangeListener[String] {
+      override def changed(observable: ObservableValue[_ <: String], oldValue: String, newValue: String): Unit = {
+        val redString: String = redTxtFld.getText
+        val greenString: String = greenTxtFld.getText
+        val blueString: String = blueTxtFld.getText
+
+        try {
+          val redVal: Double = redString.toDouble
+          val greenVal: Double = greenString.toDouble
+          val blueVal: Double = blueString.toDouble
+
+          if (redVal >= 0 && redVal <= 1 &&
+              greenVal >= 0 && greenVal <= 1 &&
+              blueVal >= 0 && blueVal <= 1) {
+            colorPreview.setFill(new Color(redVal, greenVal, blueVal, 1))
+          }
+
+        } catch {
+          case e : NumberFormatException => return // TODO: Print error to logger
+        }
+      }
+    }
+
+    redTxtFld.textProperty().addListener(colorChangeListener)
+    greenTxtFld.textProperty().addListener(colorChangeListener)
+    blueTxtFld.textProperty().addListener(colorChangeListener)
 
     val applyChangesButton = new Button()
-    applyChangesButton.setText("Apply changes")
+    applyChangesButton.setText("Apply color")
+
+    val colorPickerEvent = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        val selection: Selection = selectionsController.findSelectionByName(activeSelectionName.getText)
+        val color: Color = colorPreview.getFill.asInstanceOf[Color]
+        selection.applyColor(layersController.layers, color.getRed, color.getGreen, color.getBlue)
+        setNewCanvas(layersController.drawLayers())
+      }
+    }
+    applyChangesButton.setOnAction(colorPickerEvent)
 
     val deleteSelectionButton = new Button()
     deleteSelectionButton.setText("Delete selection")
@@ -200,13 +392,13 @@ class JavaFXTest extends Application {
     VBox.setMargin(addSelectionButton, new Insets(10, 20, 10, 20))
     VBox.setMargin(selectionsComboBox, new Insets(10, 20, 5, 20))
     VBox.setMargin(activeSelection, new Insets(5, 20, 5, 20))
-    VBox.setMargin(activeSelect, new Insets(5, 20, 5, 20))
+    VBox.setMargin(colorPicker, new Insets(5, 20, 5, 20))
     VBox.setMargin(applyChangesButton, new Insets(5, 20, 5, 20))
     VBox.setMargin(deleteSelectionButton, new Insets(5, 20, 5, 20))
 
     rightPane.setAlignment(Pos.CENTER)
 
-    rightPane.getChildren.addAll(addSelectionButton, selectionsComboBox, activeSelection, activeSelect, applyChangesButton, deleteSelectionButton)
+    rightPane.getChildren.addAll(addSelectionButton, selectionsComboBox, activeSelection, colorPicker, applyChangesButton, deleteSelectionButton)
 
     rightPane
   }

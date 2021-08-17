@@ -2,7 +2,7 @@ package controller
 
 import javafx.scene.canvas.Canvas
 import javafx.scene.image.PixelWriter
-import javafx.scene.layout.Pane
+import javafx.scene.layout.{Pane, StackPane}
 import javafx.scene.paint.Color
 import layer.Layer
 import picture.Pixel
@@ -10,7 +10,7 @@ import utility.HW
 
 import scala.annotation.tailrec
 
-class HomeController {
+class LayersController {
 
   var layers: List[Layer] = List()
 
@@ -23,12 +23,12 @@ class HomeController {
     layers = add_layer_to_list(new_layer)
   }
 
-  def draw(): Pane = {
+  def drawLayers(): Pane = {
     val dims_list: List[HW] = for (layer <- layers.reverse) yield layer.picture.dim
 
     val max_dim = this.findMaxDimension(dims_list)
 
-    val pane: Pane = new Pane()
+    val pane: Pane = new StackPane()
 
     for (layer <- layers.reverse) {
       println(layer.name)

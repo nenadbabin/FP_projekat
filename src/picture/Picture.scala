@@ -15,6 +15,13 @@ class Picture (val dim: HW) {
     }
   }
 
+  def applyColor(startPoint: Point = new Point(0, 0), size: HW = dim, red: Double, green: Double, blue: Double): Unit = {
+    for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
+         x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
+      pixels(y)(x) = new Pixel(red, green, blue)
+    }
+  }
+
   def median(center: Point, neighbors: HW): Unit = {
 
   }
