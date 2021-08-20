@@ -12,7 +12,7 @@ object Main extends App {
   val selection: Selection = new Selection("sel_1", rect_list)
 
   for (rect <- selection.rectangles) {
-    pic.toGrayscale(rect.topLeftCorner, rect.dim)
+    pic.grayscale(rect.topLeftCorner, rect.dim)
   }
 
   println(pic)
@@ -21,4 +21,12 @@ object Main extends App {
 object MainTestReadJPG extends App {
   val picture: Picture = Utility.readPictureFromPath("pictures/lena.jpg")
   println(picture)
+}
+
+
+object PictureRefactor extends App {
+  var pic: Picture = new Picture(new HW(4, 6))
+  println(pic)
+  pic.min(0)
+  println(pic)
 }
