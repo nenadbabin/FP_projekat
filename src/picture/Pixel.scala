@@ -2,15 +2,19 @@ package picture
 
 class Pixel (red: Double,
              green: Double,
-             blue: Double) {
+             blue: Double,
+             checkRange: Boolean = true) {
 
   def this(color: Double) = this(color, color, color)
+  private def checkRange(value: Double): Double = if (value < Pixel.VAL_MIN && checkRange) Pixel.VAL_MIN
+                                                  else if (value > Pixel.VAL_MAX && checkRange) Pixel.VAL_MAX
+                                                  else value
 
-  val r: Double = if (red < Pixel.VAL_MIN) Pixel.VAL_MIN else if (red > Pixel.VAL_MAX) Pixel.VAL_MAX else red
-  val g: Double = if (green < Pixel.VAL_MIN) Pixel.VAL_MIN else if (green > Pixel.VAL_MAX) Pixel.VAL_MAX else green
-  val b: Double = if (blue < Pixel.VAL_MIN) Pixel.VAL_MIN else if (blue > Pixel.VAL_MAX) Pixel.VAL_MAX else blue
+  val r: Double = checkRange(red)
+  val g: Double = checkRange(green)
+  val b: Double = checkRange(blue)
 
-  private def genericArithmeticOperation (operation: (Double, Double) => Double)(const: Double): Pixel = {
+  private def genericArithmeticOperationWithConst (operation: (Double, Double) => Double)(const: Double): Pixel = {
     def genericInner (const: Double): Pixel = {
       val newR = operation(this.r, const)
       val newG = operation(this.g, const)
@@ -21,7 +25,10 @@ class Pixel (red: Double,
     genericInner(const)
   }
 
-  private def genericFunction (operation: Double => Double)(): Pixel = {
+  private def genericFunctionWithConst(operation: (Double, Double) => Double)(const: Double): Pixel =
+    genericArithmeticOperationWithConst(operation)(const)
+
+  private def genericFunctionNoConst (operation: Double => Double)(): Pixel = {
     def genericInner: Pixel = {
       val newR = operation(this.r)
       val newG = operation(this.g)
@@ -33,49 +40,49 @@ class Pixel (red: Double,
   }
 
   def add (const: Double): Pixel = {
-    genericArithmeticOperation((x, y) => x + y)(const)
+    genericArithmeticOperationWithConst((x, y) => x + y)(const)
   }
 
   def sub (const: Double): Pixel = {
-    genericArithmeticOperation((x, y) => x - y)(const)
+    genericArithmeticOperationWithConst((x, y) => x - y)(const)
   }
 
   def inverseSub (const: Double): Pixel = {
-    genericArithmeticOperation((x, y) => y - x)(const)
+    genericArithmeticOperationWithConst((x, y) => y - x)(const)
   }
 
   def mul (const: Double): Pixel = {
-    genericArithmeticOperation((x, y) => x * y)(const)
+    genericArithmeticOperationWithConst((x, y) => x * y)(const)
   }
 
   def div (const: Double): Pixel = {
     if (const == 0) throw new ArithmeticException("Division by 0.")
-    genericArithmeticOperation((x, y) => x / y)(const)
+    genericArithmeticOperationWithConst((x, y) => x / y)(const)
   }
 
   def reverseDiv (const: Double): Pixel = {
     if (this.r == 0 || this.g == 0 || this.b == 0) throw new ArithmeticException("Division by 0.")
-    genericArithmeticOperation((x, y) => y / x)(const)
+    genericArithmeticOperationWithConst((x, y) => y / x)(const)
   }
 
   def pow (const: Double): Pixel = {
-    genericArithmeticOperation((x, y) => math.pow(x, y))(const)
+    genericFunctionWithConst((x, y) => math.pow(x, y))(const)
   }
 
   def min (const: Double): Pixel = {
-    genericArithmeticOperation((x, y) => math.min(x, y))(const)
+    genericFunctionWithConst((x, y) => math.min(x, y))(const)
   }
 
   def max (const: Double): Pixel = {
-    genericArithmeticOperation((x, y) => math.max(x, y))(const)
+    genericFunctionWithConst((x, y) => math.max(x, y))(const)
   }
 
   def log (): Pixel = {
-    genericFunction(x => math.log(x))()
+    genericFunctionNoConst(x => math.log(x))()
   }
 
   def abs (): Pixel = {
-    genericFunction(x => math.abs(x))()
+    genericFunctionNoConst(x => math.abs(x))()
   }
 
   def inversion (): Pixel = {

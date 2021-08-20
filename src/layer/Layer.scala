@@ -13,6 +13,6 @@ class Layer (val picture: Picture,
   }
 
   def applyColor(startPoint: Point, size: HW, red: Double, green: Double, blue: Double): Unit = {
-    picture.applyColor(startPoint, size, red, green, blue)
+    if (active) picture.applyColor(startPoint, size, red, green, blue)
   }
 }

@@ -42,11 +42,15 @@ class JavaFXTest extends Application {
   var drawnRectangles: List[Rectangle] = List[Rectangle]()
 
   private def setNewCanvas(pane: Pane): Unit = {
-    val paneHeight = pane.getChildren.get(0).asInstanceOf[Canvas].getHeight
-    val paneWidth = pane.getChildren.get(0).asInstanceOf[Canvas].getWidth
-
-    canvasOverlay.setHeight(paneHeight)
-    canvasOverlay.setWidth(paneWidth)
+    if (pane.getChildren.size() == 0) {
+      canvasOverlay.setHeight(0)
+      canvasOverlay.setWidth(0)
+    } else {
+      val paneHeight = pane.getChildren.get(0).asInstanceOf[Canvas].getHeight
+      val paneWidth = pane.getChildren.get(0).asInstanceOf[Canvas].getWidth
+      canvasOverlay.setHeight(paneHeight)
+      canvasOverlay.setWidth(paneWidth)
+    }
 
     val holder: StackPane = new StackPane()
     for (i <- 0 until pane.getChildren.size()) {
@@ -189,9 +193,17 @@ class JavaFXTest extends Application {
     transparency.getChildren.addAll(new Label("Transparency: "), transparencyValueField)
     transparency.setAlignment(Pos.CENTER)
 
+    val activeSelect = new HBox()
+    val group = new ToggleGroup()
+    val rb1 = new RadioButton("Yes")
+    val rb2 = new RadioButton("No")
+    rb1.setToggleGroup(group)
+    rb2.setToggleGroup(group)
+    activeSelect.getChildren.addAll(new Label("Active: "), rb1, rb2)
+    activeSelect.setAlignment(Pos.CENTER)
 
-    val applyTransparencyButton = new Button()
-    applyTransparencyButton.setText("Apply transparency")
+    val applyLayerChangesButton = new Button()
+    applyLayerChangesButton.setText("Apply changes")
     val moveUpButton = new Button()
     moveUpButton.setText("Move up")
     val moveDownButton = new Button()
@@ -203,11 +215,13 @@ class JavaFXTest extends Application {
         val layer: Layer = layersController.findLayerByName(newValue)
         transparencyValueField.setText(layer.transparency.toString)
         activeLayerName.setText(layer.name)
+        if (layer.active) rb1.setSelected(true)
+        else rb2.setSelected(true)
       }
     })
 
-    // Change transparency
-    val applyTransparencyEvent: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
+    // Apply layer changes
+    val applyLayerChangesEvent: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         try {
           val layerTransparency: Double = transparencyValueField.getText.toDouble
@@ -216,6 +230,15 @@ class JavaFXTest extends Application {
           if (layer != null) {
             if (layerTransparency >= 0.0 && layerTransparency <= 1.0) {
               layer.transparency = layerTransparency
+              if (group.getSelectedToggle != null) {
+                val toggleString: String = group.getSelectedToggle.asInstanceOf[RadioButton].getText
+                if (toggleString == "Yes") {
+                  layer.active = true
+                }
+                if (toggleString == "No") {
+                  layer.active = false
+                }
+              }
               setNewCanvas(layersController.drawLayers())
             } else {
               // TODO: Print error to logger
@@ -226,7 +249,7 @@ class JavaFXTest extends Application {
         }
       }
     }
-    applyTransparencyButton.setOnAction(applyTransparencyEvent)
+    applyLayerChangesButton.setOnAction(applyLayerChangesEvent)
 
     // Move layer backwards
     val moveLayerBackwards: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
@@ -260,11 +283,12 @@ class JavaFXTest extends Application {
     VBox.setMargin(layersComboBox, new Insets(10, 20, 5, 20))
     VBox.setMargin(activeLayer, new Insets(5, 20, 5, 20))
     VBox.setMargin(transparency, new Insets(5, 20, 5, 20))
-    VBox.setMargin(applyTransparencyButton, new Insets(5, 20, 5, 20))
+    VBox.setMargin(activeSelect, new Insets(5, 20, 5, 20))
+    VBox.setMargin(applyLayerChangesButton, new Insets(5, 20, 5, 20))
     VBox.setMargin(moveUpButton, new Insets(5, 20, 5, 20))
     VBox.setMargin(moveDownButton, new Insets(5, 20, 10, 20))
 
-    leftPane.getChildren.addAll(addLayerButton, layersComboBox, activeLayer, transparency, applyTransparencyButton, moveUpButton, moveDownButton)
+    leftPane.getChildren.addAll(addLayerButton, layersComboBox, activeLayer, transparency, activeSelect, applyLayerChangesButton, moveUpButton, moveDownButton)
 
     leftPane
   }
@@ -310,21 +334,10 @@ class JavaFXTest extends Application {
     val activeSelectionName = new Label("...")
     activeSelection.getChildren.addAll(new Label("Selection name: "), activeSelectionName)
 
-//    val activeSelect = new HBox()
-//    val group = new ToggleGroup()
-//    val rb1 = new RadioButton("Yes")
-//    val rb2 = new RadioButton("No")
-//    rb1.setToggleGroup(group)
-//    rb2.setToggleGroup(group)
-//    activeSelect.getChildren.addAll(new Label("Active: "), rb1, rb2)
-//    activeSelect.setAlignment(Pos.CENTER)
-//
     selectionsComboBox.valueProperty.addListener(new ChangeListener[String]() {
       override def changed(observable: ObservableValue[_ <: String], oldValue: String, newValue: String): Unit = {
         val selection: Selection = selectionsController.findSelectionByName(newValue)
         activeSelectionName.setText(selection.name)
-//        if (selection.active) rb1.setSelected(true)
-//        else rb2.setSelected(true)
         clearDrawingCanvas()
         val gc = canvasOverlay.getGraphicsContext2D
         for (r <- selection.rectangles)  {
