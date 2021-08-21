@@ -32,6 +32,13 @@ object Utility {
       picture.pixels(y)(x) = PixelValueScaler.scaleFrom8BitToZeroToOne(red, green, blue)
     }
 
+//    val kernel = Array[Array[Double]](
+//      Array[Double](-1, -1, -1),
+//      Array[Double](-1, 8, -1),
+//      Array[Double](-1, -1, -1),
+//    )
+//    picture.convolution(kernel)
+
     picture
   }
 }

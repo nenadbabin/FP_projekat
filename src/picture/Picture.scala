@@ -5,7 +5,7 @@ import utility.{HW, Point}
 import scala.annotation.tailrec
 
 class Picture (val dim: HW) {
-  private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(y * dim.width + x, y * dim.width + x + 1, y * dim.width + x + 2))
+  private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(0))
   val pixels: Array[Array[Pixel]] = init(dim)
 
   def add(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
@@ -64,12 +64,42 @@ class Picture (val dim: HW) {
   }
 
   def inversion(startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    inverseSub(1, startPoint, size)
+    inverseSub(Pixel.VAL_MAX, startPoint, size)
     this
   }
 
   def grayscale(startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
     operationOnEveryPixelNoConst(toGrayscalePixel, startPoint, size)
+    this
+  }
+
+  def convolution(kernel: Array[Array[Double]], startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
+    val kernelHeight: Int = kernel.length
+    val kernelWidth: Int = kernel.head.length
+    val newPixels: Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(0))
+
+    for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
+         x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
+      var newRed: Double = 0.0
+      var newGreen: Double = 0.0
+      var newBlue: Double = 0.0
+      for (kH <- 0 until kernelHeight;
+           kW <- 0 until kernelWidth) {
+        val xn: Int = x + kW - 1
+        val yn: Int = y + kH - 1
+        if (xn >= 0 && xn < dim.width && yn >= 0 && yn < dim.height) {
+          val tmpPixel = pixels(yn)(xn)
+          newRed += tmpPixel.r * kernel(kH)(kW)
+          newGreen += tmpPixel.g * kernel(kH)(kW)
+          newBlue += tmpPixel.b * kernel(kH)(kH)
+        }
+      }
+      newPixels(y)(x) = new Pixel(newRed / (kernelHeight * kernelWidth), newGreen / (kernelHeight * kernelWidth), newBlue / (kernelHeight * kernelWidth))
+    }
+    for (y <- 0 until this.dim.height;
+         x <- 0 until this.dim.width) {
+      pixels(y)(x) = newPixels(y)(x)
+    }
     this
   }
 
