@@ -66,4 +66,12 @@ object OpList extends App {
                          new Add(0.2, new Point(0, 0), pic.dim))
   val newPic1: Picture = newOp.apply(pic1)
   println(pic1)
+  newPic1.median(new HW(1, 1), new Point(0, 0), newPic1.dim)
+  println(pic1)
+}
+
+object MedianTest extends App {
+  val array: Array[Int] = Array(10, 3, 9, 5, 7, 6, 1, 7, 19, 12, 4, 5, 8)
+  val chunks = array.grouped(5).toArray
+  println(chunks)
 }

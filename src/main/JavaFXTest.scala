@@ -20,6 +20,7 @@ import selection.Selection
 import utility.{HW, Point, Rectangle, Utility}
 
 import java.io.File
+import scala.None.isDefined
 
 
 object JavaFXTest {
@@ -399,6 +400,59 @@ class JavaFXTest extends Application {
     }
     applyChangesButton.setOnAction(colorPickerEvent)
 
+    val filterOptions: ObservableList[String] = FXCollections.observableArrayList(
+      "Addition", "Subtraction", "Inverse subtraction",
+      "Multiplication", "Division", "Inverse division",
+      "Power", "Logarithm", "Absolute value",
+      "Minimum", "Maximum", "Inversion",
+      "Grayscale", "Median", "Sobel")
+    val filtersComboBox = new ComboBox[String](filterOptions)
+
+    val filterButton = new Button()
+    filterButton.setText("Apply Filter")
+
+    val filterConstTxtFld: TextField = new TextField("0.0")
+    filterConstTxtFld.setMaxWidth(35)
+
+    val filterWrapper: HBox = new HBox()
+    filterWrapper.getChildren.addAll(filtersComboBox, filterConstTxtFld)
+
+    val filterEvent = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        val selection: Selection = selectionsController.findSelectionByName(activeSelectionName.getText)
+        val filterString: String = filtersComboBox.getValue
+
+        def getValueFromTextField: Option[Double] = {
+          try {
+            val text: String = filterConstTxtFld.getText
+            Some(text.toDouble)
+          } catch {
+            case e : NumberFormatException => null // TODO: Print error to logger
+          }
+        }
+
+        filterString match {
+          case "Addition" if getValueFromTextField.isDefined => selection.add(getValueFromTextField.get, layersController.layers)
+          case "Subtraction" if getValueFromTextField.isDefined => selection.sub(getValueFromTextField.get, layersController.layers)
+          case "Inverse subtraction" if getValueFromTextField.isDefined => selection.inverseSub(getValueFromTextField.get, layersController.layers)
+          case "Multiplication" if getValueFromTextField.isDefined => selection.mul(getValueFromTextField.get, layersController.layers)
+          case "Division" if getValueFromTextField.isDefined => selection.div(getValueFromTextField.get, layersController.layers)
+          case "Inverse division" if getValueFromTextField.isDefined => selection.inverseDiv(getValueFromTextField.get, layersController.layers)
+          case "Power" if getValueFromTextField.isDefined => selection.pow(getValueFromTextField.get, layersController.layers)
+          case "Logarithm" => selection.log(layersController.layers)
+          case "Absolute value" => selection.abs(layersController.layers)
+          case "Minimum" if getValueFromTextField.isDefined => selection.min(getValueFromTextField.get, layersController.layers)
+          case "Maximum" if getValueFromTextField.isDefined => selection.max(getValueFromTextField.get, layersController.layers)
+          case "Inversion" => selection.inversion(layersController.layers)
+          case "Grayscale" => selection.grayscale(layersController.layers)
+          case "Median" => selection.median(layersController.layers)
+          case "Sobel" => selection.sobel(layersController.layers)
+        }
+        setNewCanvas(layersController.drawLayers())
+      }
+    }
+    filterButton.setOnAction(filterEvent)
+
     val deleteSelectionButton = new Button()
     deleteSelectionButton.setText("Delete selection")
 
@@ -407,11 +461,13 @@ class JavaFXTest extends Application {
     VBox.setMargin(activeSelection, new Insets(5, 20, 5, 20))
     VBox.setMargin(colorPicker, new Insets(5, 20, 5, 20))
     VBox.setMargin(applyChangesButton, new Insets(5, 20, 5, 20))
+    VBox.setMargin(filterButton, new Insets(5, 20, 5, 20))
+    VBox.setMargin(filterWrapper, new Insets(5, 20, 5, 20))
     VBox.setMargin(deleteSelectionButton, new Insets(5, 20, 5, 20))
 
     rightPane.setAlignment(Pos.CENTER)
 
-    rightPane.getChildren.addAll(addSelectionButton, selectionsComboBox, activeSelection, colorPicker, applyChangesButton, deleteSelectionButton)
+    rightPane.getChildren.addAll(addSelectionButton, selectionsComboBox, activeSelection, colorPicker, applyChangesButton, filterWrapper, filterButton, deleteSelectionButton)
 
     rightPane
   }

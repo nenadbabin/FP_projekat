@@ -76,7 +76,10 @@ class Picture (val dim: HW) {
   def convolution(kernel: Array[Array[Double]], startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
     val kernelHeight: Int = kernel.length
     val kernelWidth: Int = kernel.head.length
-    val newPixels: Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(0))
+    val newPixels: Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => {
+      val originalPixel = pixels(y)(x)
+      new Pixel(originalPixel.r, originalPixel.g, originalPixel.b)
+    })
 
     for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
          x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
@@ -100,6 +103,83 @@ class Picture (val dim: HW) {
          x <- 0 until this.dim.width) {
       pixels(y)(x) = newPixels(y)(x)
     }
+    this
+  }
+
+  def median(halfKernelSize: HW, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
+
+    def medianUpTo5(five: Array[Double]): Double = {
+      def order2(a: Array[Double], i: Int, j: Int): Unit = {
+        if (a(i)>a(j)) { val t = a(i); a(i) = a(j); a(j) = t }
+      }
+
+      def pairs(a: Array[Double], i: Int, j: Int, k: Int, l: Int): Double = {
+        if (a(i)<a(k)) { order2(a,j,k); a(j) }
+        else { order2(a,i,l); a(i) }
+      }
+
+      if (five.length < 2) return five(0)
+      order2(five,0,1)
+      if (five.length < 4) return (
+        if (five.length==2 || five(2) < five(0)) five(0)
+        else if (five(2) > five(1)) five(1)
+        else five(2)
+        )
+      order2(five,2,3)
+      if (five.length < 5) pairs(five,0,1,2,3)
+      else if (five(0) < five(2)) { order2(five,1,4); pairs(five,1,4,2,3) }
+      else { order2(five,3,4); pairs(five,0,1,3,4) }
+    }
+
+    @tailrec
+    def medianOfMedians(arr: Array[Double]): Double = {
+      val medians: Array[Double] = arr.grouped(5).map(medianUpTo5).toArray
+      if (medians.length <= 5) medianUpTo5 (medians)
+      else medianOfMedians(medians)
+    }
+
+    val halfKernelWidth = halfKernelSize.width
+    val halfKernelHeight = halfKernelSize.height
+
+    val newPixels: Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => {
+      val originalPixel = pixels(y)(x)
+      new Pixel(originalPixel.r, originalPixel.g, originalPixel.b)
+    })
+
+
+    for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
+         x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
+      val isRed: IndexedSeq[Double] =
+        for (kH <- y - halfKernelHeight to y + halfKernelHeight if kH >= 0 && kH < this.dim.height;
+             kW <- x - halfKernelWidth to x + halfKernelWidth if kW >= 0 && kW < this.dim.height)
+        yield pixels(kH)(kW).r
+
+      val isGreen: IndexedSeq[Double] =
+        for (kH <- y - halfKernelHeight to y + halfKernelHeight if kH >= 0 && kH < this.dim.height;
+             kW <- x - halfKernelWidth to x + halfKernelWidth if kW >= 0 && kW < this.dim.height)
+        yield pixels(kH)(kW).g
+
+      val isBlue: IndexedSeq[Double] =
+        for (kH <- y - halfKernelHeight to y + halfKernelHeight if kH >= 0 && kH < this.dim.height;
+             kW <- x - halfKernelWidth to x + halfKernelWidth if kW >= 0 && kW < this.dim.height)
+        yield pixels(kH)(kW).b
+
+      val arrRed: Array[Double] = isRed.toArray
+      val arrGreen: Array[Double] = isGreen.toArray
+      val arrBlue: Array[Double] = isBlue.toArray
+
+      val newRed = medianOfMedians(arrRed)
+      val newGreen = medianOfMedians(arrGreen)
+      val newBlue = medianOfMedians(arrBlue)
+
+      newPixels(y)(x) = new Pixel(newRed, newGreen, newBlue)
+    }
+
+    for (y <- 0 until this.dim.height;
+         x <- 0 until this.dim.width) {
+      pixels(y)(x) = newPixels(y)(x)
+    }
+
     this
   }
 

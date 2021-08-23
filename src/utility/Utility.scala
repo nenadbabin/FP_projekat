@@ -39,6 +39,8 @@ object Utility {
 //    )
 //    picture.convolution(kernel)
 
+//    picture.median(new HW(3, 3))
+
     picture
   }
 }
