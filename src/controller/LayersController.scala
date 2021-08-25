@@ -31,7 +31,6 @@ class LayersController {
     val pane: Pane = new StackPane()
 
     for (layer <- layers.reverse) {
-      println(layer.name)
       val picture = layer.picture
       val transparency = layer.transparency
       val active = layer.active

@@ -456,6 +456,15 @@ class JavaFXTest extends Application {
     val deleteSelectionButton = new Button()
     deleteSelectionButton.setText("Delete selection")
 
+    val deleteSelectionEvent = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        val selection: Selection = selectionsController.findSelectionByName(activeSelectionName.getText)
+        selection.deleteSelection()
+        setNewCanvas(layersController.drawLayers())
+      }
+    }
+    deleteSelectionButton.setOnAction(deleteSelectionEvent)
+
     VBox.setMargin(addSelectionButton, new Insets(10, 20, 10, 20))
     VBox.setMargin(selectionsComboBox, new Insets(10, 20, 5, 20))
     VBox.setMargin(activeSelection, new Insets(5, 20, 5, 20))

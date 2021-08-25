@@ -1,7 +1,7 @@
 package layer
 
 import picture.Picture
-import utility.{HW, Point}
+import utility.{HW, Point, Rectangle}
 
 class Layer (val picture: Picture,
              val name: String,
@@ -75,5 +75,25 @@ class Layer (val picture: Picture,
 
   def applyColor(startPoint: Point, size: HW, red: Double, green: Double, blue: Double): Unit = {
     if (active) picture.applyColor(startPoint, size, red, green, blue)
+  }
+
+  def extract(rect: Rectangle): Picture = {
+    val extractedPicture: Picture = new Picture(rect.dim)
+    for (j <- 0 until rect.dim.height;
+         i <- 0 until rect.dim.width) {
+      if (rect.topLeftCorner.y + j >= 0 && rect.topLeftCorner.y + j < picture.dim.height &&
+          rect.topLeftCorner.x + i >= 0 && rect.topLeftCorner.x + i < picture.dim.width)
+        extractedPicture.pixels(j)(i) = picture.pixels(rect.topLeftCorner.y + j)(rect.topLeftCorner.x + i)
+    }
+    extractedPicture
+  }
+
+  def restore(rect: Rectangle, backup: Picture): Unit = {
+    for (j <- 0 until rect.dim.height;
+         i <- 0 until rect.dim.width) {
+      if (rect.topLeftCorner.y + j >= 0 && rect.topLeftCorner.y + j < picture.dim.height &&
+        rect.topLeftCorner.x + i >= 0 && rect.topLeftCorner.x + i < picture.dim.width)
+        picture.pixels(rect.topLeftCorner.y + j)(rect.topLeftCorner.x + i) = backup.pixels(j)(i)
+    }
   }
 }

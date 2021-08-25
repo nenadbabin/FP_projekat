@@ -1,21 +1,28 @@
 package main
 
-import picture.{Operation, Picture, Pixel, Add, Sub}
+import layer.Layer
+import picture.{Add, Operation, Picture, Pixel, Sub}
 import selection.Selection
 import utility.{HW, Point, Rectangle, Utility}
 
 object Main extends App {
 
-  val pic: Picture = new Picture(new HW(4, 5))
-  val rect1: Rectangle = new Rectangle(new Point(1,0), new HW(10,10))
-  val rect_list: List[Rectangle] = List[Rectangle](rect1)
-  val selection: Selection = new Selection("sel_1", rect_list)
-
-  for (rect <- selection.rectangles) {
-    pic.grayscale(rect.topLeftCorner, rect.dim)
-  }
-
-  println(pic)
+//  val pic: Picture = new Picture(new HW(4, 5))
+//  val layer: Layer = new Layer(pic, "layer")
+//  val rect1: Rectangle = new Rectangle(new Point(1,0), new HW(2,2))
+//  val rect2: Rectangle = new Rectangle(new Point(2,2), new HW(2,1))
+//  val rect_list: List[Rectangle] = List[Rectangle](rect1, rect2)
+//  val selection: Selection = new Selection("sel_1", rect_list)
+//
+//  for (rect <- selection.rectangles) {
+//    pic.grayscale(rect.topLeftCorner, rect.dim)
+//  }
+//
+//  selection.addToBackups(layer, rect1)
+//  selection.addToBackups(layer, rect2)
+//
+//  println(pic)
+//  println(selection.backups.get("layer").get.head.pictureExtract)
 }
 
 object MainTestReadJPG extends App {
