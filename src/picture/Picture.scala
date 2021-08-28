@@ -5,7 +5,7 @@ import utility.{HW, Point}
 import scala.annotation.tailrec
 
 class Picture (val dim: HW) {
-  // private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(y * dim.width + x, y * dim.width + x + 1, y * dim.width + x + 2))
+//  private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(y * dim.width + x, y * dim.width + x + 1, y * dim.width + x + 2))
   private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(0))
   val pixels: Array[Array[Pixel]] = init(dim)
 
@@ -84,26 +84,46 @@ class Picture (val dim: HW) {
 
     for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
          x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
-      var newRed: Double = 0.0
-      var newGreen: Double = 0.0
-      var newBlue: Double = 0.0
-      for (kH <- 0 until kernelHeight;
-           kW <- 0 until kernelWidth) {
-        val xn: Int = x + kW - 1
-        val yn: Int = y + kH - 1
-        if (xn >= 0 && xn < dim.width && yn >= 0 && yn < dim.height) {
-          val tmpPixel = pixels(yn)(xn)
-          newRed += tmpPixel.r * kernel(kH)(kW)
-          newGreen += tmpPixel.g * kernel(kH)(kW)
-          newBlue += tmpPixel.b * kernel(kH)(kH)
+      @tailrec
+      def xIteration(currKernelY: Int, currKernelX: Int, tempColors: Pixel) : Pixel = {
+        if (currKernelX == kernelWidth) {
+          tempColors
+        } else {
+          val xn: Int = x + currKernelX - 1
+          val yn: Int = y + currKernelY - 1
+          if (xn >= 0 && xn < dim.width && yn >= 0 && yn < dim.height) {
+            val tmpPixel = pixels(yn)(xn)
+            val newRed: Double = tempColors.r + tmpPixel.r * kernel(currKernelY)(currKernelX)
+            val newGreen: Double = tempColors.g + tmpPixel.g * kernel(currKernelY)(currKernelX)
+            val newBlue: Double = tempColors.b + tmpPixel.b * kernel(currKernelY)(currKernelX)
+            xIteration(currKernelY,
+              currKernelX + 1,
+              new Pixel(newRed, newGreen, newBlue, false))
+          } else {
+            xIteration(currKernelY,
+              currKernelX + 1,
+              tempColors)
+          }
         }
       }
+
+      @tailrec
+      def yIteration(currKernelY: Int, tempColors: Pixel) : Pixel = {
+        if (currKernelY == kernelHeight) {
+          tempColors
+        } else {
+          val newTmpColor: Pixel = xIteration(currKernelY, 0, tempColors)
+          yIteration(currKernelY + 1, newTmpColor)
+        }
+      }
+
+      val newColor: Pixel = yIteration(0, new Pixel(0))
+      val newRed: Double = newColor.r
+      val newGreen: Double = newColor.g
+      val newBlue: Double = newColor.b
       newPixels(y)(x) = new Pixel(newRed / (kernelHeight * kernelWidth), newGreen / (kernelHeight * kernelWidth), newBlue / (kernelHeight * kernelWidth))
     }
-    for (y <- 0 until this.dim.height;
-         x <- 0 until this.dim.width) {
-      pixels(y)(x) = newPixels(y)(x)
-    }
+    overwrite(newPixels, pixels)
     this
   }
 
@@ -176,11 +196,7 @@ class Picture (val dim: HW) {
       newPixels(y)(x) = new Pixel(newRed, newGreen, newBlue)
     }
 
-    for (y <- 0 until this.dim.height;
-         x <- 0 until this.dim.width) {
-      pixels(y)(x) = newPixels(y)(x)
-    }
-
+    overwrite(newPixels, pixels)
     this
   }
 
@@ -305,6 +321,13 @@ class Picture (val dim: HW) {
     }
 
     printColumns("", 0)
+  }
+
+  private def overwrite(from: Array[Array[Pixel]], to: Array[Array[Pixel]]): Unit = {
+    for (y <- 0 until this.dim.height;
+         x <- 0 until this.dim.width) {
+      to(y)(x) = from(y)(x)
+    }
   }
 
 }

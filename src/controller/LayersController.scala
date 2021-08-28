@@ -9,10 +9,13 @@ import picture.Pixel
 import utility.HW
 
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 class LayersController {
 
   var layers: List[Layer] = List()
+
+  def activeLayers: List[Layer] = layers.filter((layer: Layer) => layer.active)
 
   def add_layer(new_layer: Layer): Unit = {
     def add_layer_to_list(new_layer: Layer): List[Layer] = layers match {
@@ -55,18 +58,10 @@ class LayersController {
     }
 
     pane
-//    val rect1: Rectangle = new Rectangle(new Point(0,0), new HW(256,256))
-//    val rect2: Rectangle = new Rectangle(new Point(256,256), new HW(256,256))
-//    val rect_list: List[Rectangle] = List[Rectangle](rect1, rect2)
-//    val selection: Selection = new Selection("sel_1", rect_list)
-
-//    for (rect <- selection.rectangles) {
-//      picture.toGrayscale(rect.topLeftCorner, rect.dim)
-//    }
-
   }
 
   def findLayerByName(name: String): Layer = {
+    @tailrec
     def find(list: List[Layer]): Layer = list match {
       case List() => null
       case h::t =>
@@ -74,6 +69,23 @@ class LayersController {
         else find(t)
     }
     find(layers)
+  }
+
+  def countLayersWithSimilarNames(name: String): Int = {
+    val pattern: Regex = "^.*\\.(jpg|png).*$".r
+    @tailrec
+    def find(count: Int, list: List[Layer]): Int = list match {
+      case List() => count
+      case h::t => {
+        val found: Int = h.name match {
+          case pattern(c) => 1
+          case _ => 0
+        }
+        val newCount = count + found
+        find(newCount, t)
+      }
+    }
+    find(0, layers)
   }
 
   private def findMaxDimension(list: List[HW]) = {

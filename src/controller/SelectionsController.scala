@@ -1,26 +1,30 @@
 package controller
 
-import selection.Selection
+import selection.{BaseSelection, Selection}
 import utility.Rectangle
 
 import scala.annotation.tailrec
 
 class SelectionsController {
 
-  var selections: List[Selection] = List()
+  var selections: List[BaseSelection] = List()
 
-  def addSelection(newSelection: Selection): Unit = {
-    def addSelectionToList(newSelection: Selection): List[Selection] = selections match {
+  def addSelection(newSelection: BaseSelection): Unit = {
+    def addSelectionToList(newSelection: BaseSelection): List[BaseSelection] = selections match {
       case List() => List(newSelection)
-      case _ => List[Selection](newSelection) ::: selections
+      case _ => newSelection :: selections
     }
 
     selections = addSelectionToList(newSelection)
   }
 
-  def findSelectionByName(name: String): Selection = {
+  def removeSelection(selectionToRemove: BaseSelection): Unit = {
+    selections = selections.filter(_ != selectionToRemove)
+  }
+
+  def findSelectionByName(name: String): BaseSelection = {
     @tailrec
-    def find(list: List[Selection]): Selection = list match {
+    def find(list: List[BaseSelection]): BaseSelection = list match {
       case List() => null
       case h::t =>
         if (h.name == name) h

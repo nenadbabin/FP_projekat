@@ -40,14 +40,18 @@ object PictureRefactor extends App {
 
 object Conv extends App {
   var pic: Picture = new Picture(new HW(4, 6))
+//  var pic1: Picture = new Picture(new HW(4, 6))
   println(pic)
+//  println(pic1)
   val kernel = Array[Array[Double]](
     Array[Double](-1, -1, -1),
     Array[Double](-1, 8, -1),
     Array[Double](-1, -1, -1),
   )
   pic.convolution(kernel)
+//  pic1.oldConvolution(kernel)
   println(pic)
+//  println(pic1)
 }
 
 object OpList extends App {
