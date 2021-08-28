@@ -20,7 +20,6 @@ import selection.{BaseSelection, FlexibleSelection, Selection}
 import utility.{HW, Point, Rectangle, Utility}
 
 import java.io.File
-import scala.util.matching.Regex
 
 
 object JavaFXTest {
@@ -56,7 +55,7 @@ class JavaFXTest extends Application {
     }
 
     val holder: StackPane = new StackPane()
-    for (i <- 0 until pane.getChildren.size()) {
+    for (_ <- 0 until pane.getChildren.size()) {
       holder.getChildren.add(pane.getChildren.get(0))
     }
     holder.getChildren.add(canvasOverlay)
@@ -161,6 +160,8 @@ class JavaFXTest extends Application {
   }
 
   def createLeftPane(): VBox = {
+    val leftPane = new VBox()
+
     val addLayerButton = new Button("Add layer...")
 
     val options: ObservableList[String] = FXCollections.observableArrayList()
@@ -174,12 +175,14 @@ class JavaFXTest extends Application {
         val stage: Stage = (e.getSource.asInstanceOf[Node]).getScene.getWindow.asInstanceOf[Stage]
         val file: File = fileChooser.showOpenDialog(stage)
         val fileName: String = file.getName
-        val newFileName: String =
+        val newFileName: String = {
+          // Enables layers to have the same picture, but different names
           if (layersController.findLayerByName(fileName) != null) {
             s"${fileName}_${layersController.countLayersWithSimilarNames(fileName)}"
           } else {
             fileName
           }
+        }
         if (file != null) {
           val picture: Picture = Utility.readPictureFromFile(file)
           val new_layer: Layer = new Layer(picture, newFileName)
@@ -191,13 +194,13 @@ class JavaFXTest extends Application {
     }
     addLayerButton.setOnAction(event)
 
-    val leftPane = new VBox()
-
+    // Layer name
     val activeLayer = new HBox()
     val activeLayerName = new Label("...")
     activeLayer.getChildren.addAll(new Label("Layer name: "), activeLayerName)
     activeLayer.setAlignment(Pos.CENTER)
 
+    // Transparency
     val transparency = new HBox()
     transparency.setSpacing(5)
     val transparencyValueField = new TextField("")
@@ -205,6 +208,7 @@ class JavaFXTest extends Application {
     transparency.getChildren.addAll(new Label("Transparency: "), transparencyValueField)
     transparency.setAlignment(Pos.CENTER)
 
+    // Is layer active
     val activeSelect = new HBox()
     activeSelect.setSpacing(5)
     val group = new ToggleGroup()
@@ -215,10 +219,13 @@ class JavaFXTest extends Application {
     activeSelect.getChildren.addAll(new Label("Active: "), rb1, rb2)
     activeSelect.setAlignment(Pos.CENTER)
 
+    // Apply changes to layer
     val applyLayerChangesButton = new Button()
     applyLayerChangesButton.setText("Apply changes")
     val moveUpButton = new Button()
+    // Move layer up
     moveUpButton.setText("Move up")
+    // Move layer down
     val moveDownButton = new Button()
     moveDownButton.setText("Move down")
 
@@ -313,18 +320,22 @@ class JavaFXTest extends Application {
   }
 
   def createRightPane(): VBox = {
+    val rightPane = new VBox()
 
     val addSelectionButton: Button = new Button("Add selection...")
 
     val selectionsOptions: ObservableList[String] = FXCollections.observableArrayList("No selection")
     val selection: FlexibleSelection = new FlexibleSelection("No selection")
     selectionsController.addSelection(selection)
-    val selectionsComboBox = new ComboBox[String](selectionsOptions)
+    val selectionsComboBox: ComboBox[String] = new ComboBox[String](selectionsOptions)
 
+    // Dialog for layer name
     val selectionNameDialog: TextInputDialog = new TextInputDialog
     selectionNameDialog.setHeaderText("Choose name for the new selection.")
     selectionNameDialog.setTitle("Selection name")
     selectionNameDialog.setGraphic(null)
+
+    // Add new selection / Stop drawing event
     val selectionDrawingEvent = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         if (!isUserDrawingSelections) {
@@ -356,12 +367,12 @@ class JavaFXTest extends Application {
     }
     addSelectionButton.setOnAction(selectionDrawingEvent)
 
-    val rightPane = new VBox()
-
+    // Selection name
     val activeSelection = new HBox()
     val activeSelectionName = new Label("...")
     activeSelection.getChildren.addAll(new Label("Selection name: "), activeSelectionName)
 
+    // Change layer name event
     selectionsComboBox.valueProperty.addListener(new ChangeListener[String]() {
       override def changed(observable: ObservableValue[_ <: String], oldValue: String, newValue: String): Unit = {
         val selection: BaseSelection = selectionsController.findSelectionByName(newValue)
@@ -379,6 +390,7 @@ class JavaFXTest extends Application {
       }
     })
 
+    // Color picker for applying color
     val colorPicker: HBox = new HBox()
     colorPicker.setSpacing(5)
     val redTxtFld: TextField = new TextField("0.0")
@@ -390,9 +402,9 @@ class JavaFXTest extends Application {
     val colorPreview: JavaFXRectangle = new JavaFXRectangle(0, 0, 25, 25)
     colorPreview.setFill(new Color(0, 0, 0, 1))
     colorPreview.setStroke(Color.BLACK)
-
     colorPicker.getChildren.addAll(redTxtFld, greenTxtFld, blueTxtFld, colorPreview)
 
+    // Show preview of chosen color
     val colorChangeListener: ChangeListener[String] = new ChangeListener[String] {
       override def changed(observable: ObservableValue[_ <: String], oldValue: String, newValue: String): Unit = {
         val redString: String = redTxtFld.getText
@@ -411,18 +423,20 @@ class JavaFXTest extends Application {
           }
 
         } catch {
-          case e : NumberFormatException => return // TODO: Print error to logger
+          case _ : NumberFormatException => return // TODO: Print error to logger
         }
       }
     }
-
     redTxtFld.textProperty().addListener(colorChangeListener)
     greenTxtFld.textProperty().addListener(colorChangeListener)
     blueTxtFld.textProperty().addListener(colorChangeListener)
 
+    // Apply color
     val applyChangesButton = new Button()
     applyChangesButton.setText("Apply color")
 
+    // Apply color event
+    // Read color from color preview
     val colorPickerEvent = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         val selection: BaseSelection = selectionsController.findSelectionByName(activeSelectionName.getText)
@@ -433,6 +447,7 @@ class JavaFXTest extends Application {
     }
     applyChangesButton.setOnAction(colorPickerEvent)
 
+    // Filtering
     val filterOptions: ObservableList[String] = FXCollections.observableArrayList(
       "Addition", "Subtraction", "Inverse subtraction",
       "Multiplication", "Division", "Inverse division",
@@ -444,6 +459,7 @@ class JavaFXTest extends Application {
     val filterButton = new Button()
     filterButton.setText("Apply Filter")
 
+    // Const input
     val filterConstTxtFld: TextField = new TextField("0.0")
     filterConstTxtFld.setMaxWidth(35)
 
@@ -451,6 +467,7 @@ class JavaFXTest extends Application {
     filterWrapper.setSpacing(5)
     filterWrapper.getChildren.addAll(filtersComboBox, filterConstTxtFld)
 
+    // Apply filtering event
     val filterEvent = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         val selection: BaseSelection = selectionsController.findSelectionByName(activeSelectionName.getText)
@@ -461,32 +478,53 @@ class JavaFXTest extends Application {
             val text: String = filterConstTxtFld.getText
             Some(text.toDouble)
           } catch {
-            case e : NumberFormatException => null // TODO: Print error to logger
+            case _ : NumberFormatException => None // TODO: Print error to logger
           }
         }
 
-        filterString match {
-          case "Addition" if getValueFromTextField.isDefined => selection.add(getValueFromTextField.get, layersController.activeLayers)
-          case "Subtraction" if getValueFromTextField.isDefined => selection.sub(getValueFromTextField.get, layersController.activeLayers)
-          case "Inverse subtraction" if getValueFromTextField.isDefined => selection.inverseSub(getValueFromTextField.get, layersController.activeLayers)
-          case "Multiplication" if getValueFromTextField.isDefined => selection.mul(getValueFromTextField.get, layersController.activeLayers)
-          case "Division" if getValueFromTextField.isDefined => selection.div(getValueFromTextField.get, layersController.activeLayers)
-          case "Inverse division" if getValueFromTextField.isDefined => selection.inverseDiv(getValueFromTextField.get, layersController.activeLayers)
-          case "Power" if getValueFromTextField.isDefined => selection.pow(getValueFromTextField.get, layersController.activeLayers)
-          case "Logarithm" => selection.log(layersController.layers)
-          case "Absolute value" => selection.abs(layersController.layers)
-          case "Minimum" if getValueFromTextField.isDefined => selection.min(getValueFromTextField.get, layersController.activeLayers)
-          case "Maximum" if getValueFromTextField.isDefined => selection.max(getValueFromTextField.get, layersController.activeLayers)
-          case "Inversion" => selection.inversion(layersController.activeLayers)
-          case "Grayscale" => selection.grayscale(layersController.activeLayers)
-          case "Median" => selection.median(layersController.activeLayers)
-          case "Sobel" => selection.sobel(layersController.activeLayers)
+       val (success, errorMessage): (Boolean, Option[String]) = filterString match {
+          case "Addition" if getValueFromTextField.isDefined
+          => selection.add(getValueFromTextField.get, layersController.activeLayers)
+          case "Subtraction" if getValueFromTextField.isDefined
+          => selection.sub(getValueFromTextField.get, layersController.activeLayers)
+          case "Inverse subtraction" if getValueFromTextField.isDefined
+          => selection.inverseSub(getValueFromTextField.get, layersController.activeLayers)
+          case "Multiplication" if getValueFromTextField.isDefined
+          => selection.mul(getValueFromTextField.get, layersController.activeLayers)
+          case "Division" if getValueFromTextField.isDefined
+          => selection.div(getValueFromTextField.get, layersController.activeLayers)
+          case "Inverse division" if getValueFromTextField.isDefined
+          => selection.inverseDiv(getValueFromTextField.get, layersController.activeLayers)
+          case "Power" if getValueFromTextField.isDefined
+          => selection.pow(getValueFromTextField.get, layersController.activeLayers)
+          case "Logarithm"
+          => selection.log(layersController.layers)
+          case "Absolute value"
+          => selection.abs(layersController.layers)
+          case "Minimum" if getValueFromTextField.isDefined
+          => selection.min(getValueFromTextField.get, layersController.activeLayers)
+          case "Maximum" if getValueFromTextField.isDefined
+          => selection.max(getValueFromTextField.get, layersController.activeLayers)
+          case "Inversion"
+          => selection.inversion(layersController.activeLayers)
+          case "Grayscale"
+          => selection.grayscale(layersController.activeLayers)
+          case "Median"
+          => selection.median(layersController.activeLayers)
+          case "Sobel"
+          => selection.sobel(layersController.activeLayers)
+          case _ => (false, "Error during filtering.")
         }
+
+        // TODO: Add error message to logger
+        if (!success) println(errorMessage.get)
+
         setNewCanvas(layersController.drawLayers())
       }
     }
     filterButton.setOnAction(filterEvent)
 
+    // Delete selection
     val deleteSelectionButton = new Button()
     deleteSelectionButton.setText("Delete selection")
 
@@ -495,7 +533,7 @@ class JavaFXTest extends Application {
         val selectionName: String = activeSelectionName.getText
         val selection: BaseSelection = selectionsController.findSelectionByName(selectionName)
         selection match {
-          case s: Selection =>
+          case _: Selection =>
             // Delete selection
             selection.restore()
             selectionsController.removeSelection(selection)
