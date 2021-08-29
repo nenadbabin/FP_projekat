@@ -177,7 +177,7 @@ class JavaFXTest extends Application {
         val fileName: String = file.getName
         val newFileName: String = {
           // Enables layers to have the same picture, but different names
-          if (layersController.findLayerByName(fileName) != null) {
+          if (layersController.findLayerByName(fileName).isDefined) {
             s"${fileName}_${layersController.countLayersWithSimilarNames(fileName)}"
           } else {
             fileName
@@ -232,11 +232,14 @@ class JavaFXTest extends Application {
     // Add listener for layer selection change
     layersComboBox.valueProperty.addListener(new ChangeListener[String]() {
       override def changed(observable: ObservableValue[_ <: String], oldValue: String, newValue: String): Unit = {
-        val layer: Layer = layersController.findLayerByName(newValue)
-        transparencyValueField.setText(layer.transparency.toString)
-        activeLayerName.setText(layer.name)
-        if (layer.active) rb1.setSelected(true)
-        else rb2.setSelected(true)
+        val layerOpt: Option[Layer] = layersController.findLayerByName(newValue)
+        if (layerOpt.isDefined) {
+          val layer: Layer = layerOpt match {case Some(l) => l}
+          transparencyValueField.setText(layer.transparency.toString)
+          activeLayerName.setText(layer.name)
+          if (layer.active) rb1.setSelected(true)
+          else rb2.setSelected(true)
+        }
       }
     })
 
@@ -246,8 +249,9 @@ class JavaFXTest extends Application {
         try {
           val layerTransparency: Double = transparencyValueField.getText.toDouble
           val layerName: String = activeLayerName.getText
-          val layer: Layer = layersController.findLayerByName(layerName)
-          if (layer != null) {
+          val layerOpt: Option[Layer] = layersController.findLayerByName(layerName)
+          if (layerOpt.isDefined) {
+            val layer: Layer = layerOpt match {case Some(l) => l}
             if (layerTransparency >= 0.0 && layerTransparency <= 1.0) {
               layer.transparency = layerTransparency
               if (group.getSelectedToggle != null) {
@@ -275,8 +279,9 @@ class JavaFXTest extends Application {
     val moveLayerBackwards: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         val layerName: String = activeLayerName.getText
-        val layer: Layer = layersController.findLayerByName(layerName)
-        if (layer != null) {
+        val layerOpt: Option[Layer] = layersController.findLayerByName(layerName)
+        if (layerOpt.isDefined) {
+          val layer: Layer = layerOpt match {case Some(l) => l}
           layersController.moveLayerBackwards(layer)
           setNewCanvas(layersController.drawLayers())
         }
@@ -288,8 +293,9 @@ class JavaFXTest extends Application {
     val moveLayerForwards: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         val layerName: String = activeLayerName.getText
-        val layer: Layer = layersController.findLayerByName(layerName)
-        if (layer != null) {
+        val layerOpt: Option[Layer] = layersController.findLayerByName(layerName)
+        if (layerOpt.isDefined) {
+          val layer: Layer = layerOpt match {case Some(l) => l}
           layersController.moveLayerForwards(layer)
           setNewCanvas(layersController.drawLayers())
         }
@@ -513,7 +519,7 @@ class JavaFXTest extends Application {
           => selection.median(layersController.activeLayers)
           case "Sobel"
           => selection.sobel(layersController.activeLayers)
-          case _ => (false, "Error during filtering.")
+          case _ => (false, Some("Error during filtering."))
         }
 
         // TODO: Add error message to logger

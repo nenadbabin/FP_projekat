@@ -9,72 +9,72 @@ class Picture (val dim: HW) {
   private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(0))
   val pixels: Array[Array[Pixel]] = init(dim)
 
-  def add(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelWithConst(addPixel, startPoint, size)(const)
+  def add(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelWithConst(addPixel, startPoint, size)(const, checkRange)
     this
   }
 
-  def sub(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelWithConst(subPixel, startPoint, size)(const)
+  def sub(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelWithConst(subPixel, startPoint, size)(const, checkRange)
     this
   }
 
-  def inverseSub(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelWithConst(inverseSubPixel, startPoint, size)(const)
+  def inverseSub(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelWithConst(inverseSubPixel, startPoint, size)(const, checkRange)
     this
   }
 
-  def mul(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelWithConst(mulPixel, startPoint, size)(const)
+  def mul(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelWithConst(mulPixel, startPoint, size)(const, checkRange)
     this
   }
 
-  def div(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelWithConst(divPixel, startPoint, size)(const)
+  def div(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelWithConst(divPixel, startPoint, size)(const, checkRange)
     this
   }
 
-  def inverseDiv(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelWithConst(inverseDivPixel, startPoint, size)(const)
+  def inverseDiv(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelWithConst(inverseDivPixel, startPoint, size)(const, checkRange)
     this
   }
 
-  def pow(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelWithConst(powPixel, startPoint, size)(const)
+  def pow(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelWithConst(powPixel, startPoint, size)(const, checkRange)
     this
   }
 
-  def min(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelWithConst(minPixel, startPoint, size)(const)
+  def min(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelWithConst(minPixel, startPoint, size)(const, checkRange)
     this
   }
 
-  def max(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelWithConst(maxPixel, startPoint, size)(const)
+  def max(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelWithConst(maxPixel, startPoint, size)(const, checkRange)
     this
   }
 
-  def log(startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelNoConst(logPixel, startPoint, size)
+  def log(startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelNoConst(logPixel, startPoint, size, checkRange)
     this
   }
 
-  def abs(startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelNoConst(absPixel, startPoint, size)
+  def abs(startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelNoConst(absPixel, startPoint, size, checkRange)
     this
   }
 
-  def inversion(startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    inverseSub(Pixel.VAL_MAX, startPoint, size)
+  def inversion(startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    inverseSub(Pixel.VAL_MAX, startPoint, size, checkRange)
     this
   }
 
-  def grayscale(startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
-    operationOnEveryPixelNoConst(toGrayscalePixel, startPoint, size)
+  def grayscale(startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
+    operationOnEveryPixelNoConst(toGrayscalePixel, startPoint, size, checkRange)
     this
   }
 
-  def convolution(kernel: Array[Array[Double]], startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
+  def convolution(kernel: Array[Array[Double]], startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
     val kernelHeight: Int = kernel.length
     val kernelWidth: Int = kernel.head.length
     val newPixels: Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => {
@@ -121,13 +121,16 @@ class Picture (val dim: HW) {
       val newRed: Double = newColor.r
       val newGreen: Double = newColor.g
       val newBlue: Double = newColor.b
-      newPixels(y)(x) = new Pixel(newRed / (kernelHeight * kernelWidth), newGreen / (kernelHeight * kernelWidth), newBlue / (kernelHeight * kernelWidth))
+      newPixels(y)(x) = new Pixel(newRed / (kernelHeight * kernelWidth),
+                                  newGreen / (kernelHeight * kernelWidth),
+                                  newBlue / (kernelHeight * kernelWidth),
+                                  checkRange)
     }
     overwrite(newPixels, pixels)
     this
   }
 
-  def median(halfKernelSize: HW, startPoint: Point = new Point(0, 0), size: HW = dim): Picture = {
+  def median(halfKernelSize: HW, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
 
     def medianUpTo5(five: Array[Double]): Double = {
       def order2(a: Array[Double], i: Int, j: Int): Unit = {
@@ -193,109 +196,109 @@ class Picture (val dim: HW) {
       val newGreen = medianOfMedians(arrGreen)
       val newBlue = medianOfMedians(arrBlue)
 
-      newPixels(y)(x) = new Pixel(newRed, newGreen, newBlue)
+      newPixels(y)(x) = new Pixel(newRed, newGreen, newBlue, checkRange)
     }
 
     overwrite(newPixels, pixels)
     this
   }
 
-  def applyColor(startPoint: Point = new Point(0, 0), size: HW = dim, red: Double, green: Double, blue: Double): Picture = {
+  def applyColor(startPoint: Point = new Point(0, 0), size: HW = dim, red: Double, green: Double, blue: Double, checkRange: Boolean = true): Picture = {
     for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
          x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
-      pixels(y)(x) = new Pixel(red, green, blue)
+      pixels(y)(x) = new Pixel(red, green, blue, checkRange)
     }
     this
   }
 
-  private def operationOnEveryPixelWithConst (operation: (Pixel, Double) => Pixel, startPoint: Point, size: HW)(const: Double): Unit = {
+  private def operationOnEveryPixelWithConst (operation: (Pixel, Double, Boolean) => Pixel, startPoint: Point, size: HW)(const: Double, checkRange: Boolean = true): Unit = {
     for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
          x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
-      pixels(y)(x) = operation(pixels(y)(x), const)
+      pixels(y)(x) = operation(pixels(y)(x), const, checkRange)
     }
   }
 
-  private def operationOnEveryPixelNoConst (operation: Pixel => Pixel, startPoint: Point, size: HW): Unit = {
+  private def operationOnEveryPixelNoConst (operation: (Pixel, Boolean) => Pixel, startPoint: Point, size: HW, checkRange: Boolean = true): Unit = {
     for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
          x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
-      pixels(y)(x) = operation(pixels(y)(x))
+      pixels(y)(x) = operation(pixels(y)(x), checkRange)
     }
   }
 
-  private def genericArithmeticOperationWithConst (operation: (Double, Double) => Double)(pixel: Pixel, const: Double): Pixel = {
+  private def genericArithmeticOperationWithConst (operation: (Double, Double) => Double)(pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
     def genericInner (const: Double): Pixel = {
       val newR = operation(pixel.r, const)
       val newG = operation(pixel.g, const)
       val newB = operation(pixel.b, const)
 
-      new Pixel(newR, newG, newB)
+      new Pixel(newR, newG, newB, checkRange)
     }
     genericInner(const)
   }
 
-  private def genericFunctionWithConst(operation: (Double, Double) => Double)(pixel: Pixel, const: Double): Pixel =
-    genericArithmeticOperationWithConst(operation)(pixel, const)
+  private def genericFunctionWithConst(operation: (Double, Double) => Double)(pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel =
+    genericArithmeticOperationWithConst(operation)(pixel, const, checkRange)
 
-  private def genericFunctionNoConst (operation: Double => Double)(pixel: Pixel): Pixel = {
+  private def genericFunctionNoConst (operation: Double => Double)(pixel: Pixel, checkRange: Boolean = true): Pixel = {
     def genericInner: Pixel = {
       val newR = operation(pixel.r)
       val newG = operation(pixel.g)
       val newB = operation(pixel.b)
 
-      new Pixel(newR, newG, newB)
+      new Pixel(newR, newG, newB, checkRange)
     }
     genericInner
   }
 
-  private def addPixel (pixel: Pixel, const: Double): Pixel = {
-    genericArithmeticOperationWithConst((x, y) => x + y)(pixel, const)
+  private def addPixel (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
+    genericArithmeticOperationWithConst((x, y) => x + y)(pixel, const, checkRange)
   }
 
-  private def subPixel (pixel: Pixel, const: Double): Pixel = {
-    genericArithmeticOperationWithConst((x, y) => x - y)(pixel, const)
+  private def subPixel (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
+    genericArithmeticOperationWithConst((x, y) => x - y)(pixel, const, checkRange)
   }
 
-  private def inverseSubPixel (pixel: Pixel, const: Double): Pixel = {
-    genericArithmeticOperationWithConst((x, y) => y - x)(pixel, const)
+  private def inverseSubPixel (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
+    genericArithmeticOperationWithConst((x, y) => y - x)(pixel, const, checkRange)
   }
 
-  private def mulPixel (pixel: Pixel, const: Double): Pixel = {
-    genericArithmeticOperationWithConst((x, y) => x * y)(pixel, const)
+  private def mulPixel (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
+    genericArithmeticOperationWithConst((x, y) => x * y)(pixel, const, checkRange)
   }
 
-  private def divPixel (pixel: Pixel, const: Double): Pixel = {
+  private def divPixel (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
     if (const == 0) throw new ArithmeticException("Division by 0.")
-    genericArithmeticOperationWithConst((x, y) => x / y)(pixel, const)
+    genericArithmeticOperationWithConst((x, y) => x / y)(pixel, const, checkRange)
   }
 
-  private def inverseDivPixel (pixel: Pixel, const: Double): Pixel = {
+  private def inverseDivPixel (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
     if (pixel.r == 0 || pixel.g == 0 || pixel.b == 0) throw new ArithmeticException("Division by 0.")
-    genericArithmeticOperationWithConst((x, y) => y / x)(pixel, const)
+    genericArithmeticOperationWithConst((x, y) => y / x)(pixel, const, checkRange)
   }
 
-  private def powPixel (pixel: Pixel, const: Double): Pixel = {
-    genericFunctionWithConst((x, y) => math.pow(x, y))(pixel, const)
+  private def powPixel (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
+    genericFunctionWithConst((x, y) => math.pow(x, y))(pixel, const, checkRange)
   }
 
-  private def minPixel (pixel: Pixel, const: Double): Pixel = {
-    genericFunctionWithConst((x, y) => math.min(x, y))(pixel, const)
+  private def minPixel (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
+    genericFunctionWithConst((x, y) => math.min(x, y))(pixel, const, checkRange)
   }
 
-  private def maxPixel (pixel: Pixel, const: Double): Pixel = {
-    genericFunctionWithConst((x, y) => math.max(x, y))(pixel, const)
+  private def maxPixel (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
+    genericFunctionWithConst((x, y) => math.max(x, y))(pixel, const, checkRange)
   }
 
-  private def logPixel (pixel: Pixel): Pixel = {
-    genericFunctionNoConst(x => math.log(x))(pixel)
+  private def logPixel (pixel: Pixel, checkRange: Boolean = true): Pixel = {
+    genericFunctionNoConst(x => math.log(x))(pixel, checkRange)
   }
 
-  private def absPixel (pixel: Pixel): Pixel = {
-    genericFunctionNoConst(x => math.abs(x))(pixel)
+  private def absPixel (pixel: Pixel, checkRange: Boolean = true): Pixel = {
+    genericFunctionNoConst(x => math.abs(x))(pixel, checkRange)
   }
 
-  private def toGrayscalePixel (pixel: Pixel): Pixel = {
+  private def toGrayscalePixel (pixel: Pixel, checkRange: Boolean = true): Pixel = {
     val avg = (pixel.r + pixel.g + pixel.b) / 3
-    new Pixel(avg, avg, avg)
+    new Pixel(avg, avg, avg, checkRange)
   }
 
   override def toString: String = {

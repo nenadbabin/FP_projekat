@@ -60,12 +60,12 @@ class LayersController {
     pane
   }
 
-  def findLayerByName(name: String): Layer = {
+  def findLayerByName(name: String): Option[Layer] = {
     @tailrec
-    def find(list: List[Layer]): Layer = list match {
-      case List() => null
+    def find(list: List[Layer]): Option[Layer] = list match {
+      case List() => None
       case h::t =>
-        if (h.name == name) h
+        if (h.name == name) Some(h)
         else find(t)
     }
     find(layers)

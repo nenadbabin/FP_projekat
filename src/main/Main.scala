@@ -1,7 +1,7 @@
 package main
 
 import layer.Layer
-import picture.{Add, Operation, Picture, Pixel, Sub}
+import picture.{Add, Div, Mul, Operation, Picture, Pixel, Sub}
 import selection.Selection
 import utility.{HW, Point, Rectangle, Utility}
 
@@ -56,7 +56,8 @@ object Conv extends App {
 
 object OpList extends App {
   val pic: Picture = new Picture(new HW(4, 5))
-  val list: List[Operation] = List(new Add(0.5, new Point(1, 1), pic.dim, new Add(0.1, new Point(1, 1), pic.dim)),
+  val list: List[Operation] = List(new Add(0.5, new Point(1, 1), pic.dim,
+                                   new Add(0.1, new Point(1, 1), pic.dim)),
                                    new Sub(0.3, new Point(2, 2), pic.dim))
   val newPic: Picture = (pic /: list)((picture: Picture, elem: Operation) => {elem.apply(picture)})
   println(newPic)
@@ -79,6 +80,16 @@ object OpList extends App {
   println(pic1)
   newPic1.median(new HW(1, 1), new Point(0, 0), newPic1.dim)
   println(pic1)
+}
+
+object OperationComposition extends App {
+  val pic: Picture = new Picture(new HW(4, 5))
+  val opList: Operation = new Add(4, new Point(0, 0), pic.dim,
+                          new Sub(3.5, new Point(0, 0), pic.dim,
+                          new Mul(3, new Point(0, 0), pic.dim,
+                          new Div(10, new Point(0, 0), pic.dim))))
+  opList.apply(pic)
+  println(pic)
 }
 
 object MedianTest extends App {
