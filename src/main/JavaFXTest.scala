@@ -40,7 +40,7 @@ class JavaFXTest extends Application {
   val canvasOverlay = new Canvas()
 
   // Drawing rectangles for selections
-  var isUserDrawingSelections: Boolean = false
+
   var drawnRectangles: List[Rectangle] = List[Rectangle]()
 
   private def setNewCanvas(pane: Pane): Unit = {
@@ -84,74 +84,26 @@ class JavaFXTest extends Application {
     canvasOverlay.setHeight(512)
 
     canvasOverlay.setOnMousePressed((event: MouseEvent) => {
-      def foo(event: MouseEvent) = {
-        if (isUserDrawingSelections) {
-          if (selectionDrawController.new_rectangle_is_being_drawn == false) {
-            selectionDrawController.starting_point_x = event.getX
-            selectionDrawController.starting_point_y = event.getY
-            selectionDrawController.new_rectangle = new JavaFXRectangle
-            // A non-finished rectangle has always the same color.
-            selectionDrawController.new_rectangle.setFill(Color.SNOW) // almost white color
-
-            selectionDrawController.new_rectangle.setStroke(Color.BLACK)
-            selectionDrawController.group_for_rectangles.getChildren.add(selectionDrawController.new_rectangle)
-            selectionDrawController.new_rectangle_is_being_drawn = true
-          }
-        }
-      }
-
-      foo(event)
+      selectionDrawController.onMousePressed(event)
     })
     canvasOverlay.setOnMouseDragged((event: MouseEvent) => {
-      def foo(event: MouseEvent) = {
-        if (isUserDrawingSelections) {
-          if (selectionDrawController.new_rectangle_is_being_drawn == true) {
-            val current_ending_point_x = event.getX
-            val current_ending_point_y = event.getY
-            selectionDrawController.adjust_rectangle_properties(selectionDrawController.starting_point_x, selectionDrawController.starting_point_y, current_ending_point_x, current_ending_point_y, selectionDrawController.new_rectangle)
-            clearDrawingCanvas()
-            val gc = canvasOverlay.getGraphicsContext2D
-
-            for (r <- drawnRectangles)  {
-              val gc = canvasOverlay.getGraphicsContext2D
-              gc.strokeRoundRect(r.topLeftCorner.x, r.topLeftCorner.y, r.dim.width, r.dim.height, 1, 1)
-            }
-
-            gc.strokeRoundRect(selectionDrawController.new_rectangle.getX,
-              selectionDrawController.new_rectangle.getY,
-              selectionDrawController.new_rectangle.getWidth,
-              selectionDrawController.new_rectangle.getHeight, 1, 1)
-          }
-        }
+      selectionDrawController.adjustRectProperties(event)
+      clearDrawingCanvas()
+      // Draw rectangles on screen (canvas)
+      val gc = canvasOverlay.getGraphicsContext2D
+      for (r <- drawnRectangles)  {
+        val gc = canvasOverlay.getGraphicsContext2D
+        gc.strokeRoundRect(r.topLeftCorner.x, r.topLeftCorner.y, r.dim.width, r.dim.height, 1, 1)
       }
-
-      foo(event)
+      val newRect: JavaFXRectangle = selectionDrawController.new_rectangle
+      gc.strokeRoundRect(newRect.getX, newRect.getY, newRect.getWidth, newRect.getHeight, 1, 1)
     })
     canvasOverlay.setOnMouseReleased((event: MouseEvent) => {
-      def foo(event: MouseEvent) = {
-        if (isUserDrawingSelections) {
-          if (selectionDrawController.new_rectangle_is_being_drawn == true) { // Now the drawing of the new rectangle is finished.
-            // Let's set the final color for the rectangle.
-            selectionDrawController.new_rectangle.setFill(selectionDrawController.rectangle_colors(selectionDrawController.color_index))
-            selectionDrawController.color_index += 1 // Index for the next color to use.
-
-            // If all colors have been used we'll start re-using colors from the
-            // beginning of the array.
-            val x: Int = selectionDrawController.new_rectangle.getX.toInt
-            val y: Int = selectionDrawController.new_rectangle.getY.toInt
-            val height: Int = selectionDrawController.new_rectangle.getHeight.toInt
-            val width: Int = selectionDrawController.new_rectangle.getWidth.toInt
-            val rectToAdd: Rectangle = new Rectangle(new Point(x, y), new HW(height, width))
-            drawnRectangles = rectToAdd :: drawnRectangles
-
-            if (selectionDrawController.color_index >= selectionDrawController.rectangle_colors.length) selectionDrawController.color_index = 0
-            selectionDrawController.new_rectangle = null
-            selectionDrawController.new_rectangle_is_being_drawn = false
-          }
-        }
+      val rectToAdd: Rectangle = selectionDrawController.setOnMouseReleased(event) match {
+        case Some(r) => r
+        case _ => null
       }
-
-      foo(event)
+      if (rectToAdd != null) drawnRectangles = rectToAdd :: drawnRectangles
     })
 
     root.getChildren.add(bPane)
@@ -344,7 +296,7 @@ class JavaFXTest extends Application {
     // Add new selection / Stop drawing event
     val selectionDrawingEvent = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
-        if (!isUserDrawingSelections) {
+        if (!selectionDrawController.isUserDrawingSelections) {
           selectionNameDialog.showAndWait
           val selectionName: String = selectionNameDialog.getEditor.getText
           if (selectionName == "") {
@@ -356,15 +308,15 @@ class JavaFXTest extends Application {
             return
           }
           addSelectionButton.setText("Finish drawing")
-          isUserDrawingSelections = true
+          selectionDrawController.isUserDrawingSelections = true
           clearDrawingCanvas()
         } else {
           val selectionName: String = selectionNameDialog.getEditor.getText
           selectionsOptions.add(selectionName)
-          val selection: Selection = new Selection(selectionName, drawnRectangles)
+          val selection: Selection = Selection(selectionName, drawnRectangles)
           selectionsController.addSelection(selection)
           addSelectionButton.setText("Add selection...")
-          isUserDrawingSelections = false
+          selectionDrawController.isUserDrawingSelections = false
           drawnRectangles = List[Rectangle]()
           clearDrawingCanvas()
         }

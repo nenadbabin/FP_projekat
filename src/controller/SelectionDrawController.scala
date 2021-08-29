@@ -1,32 +1,70 @@
 package controller
 
-import javafx.scene.Group
+import javafx.scene.input.MouseEvent
 import javafx.scene.paint.Color
-import javafx.scene.shape.Rectangle
+import javafx.scene.shape.{Rectangle => JavaFXRectangle}
+import utility.{HW, Point, Rectangle}
 
 class SelectionDrawController {
-  var starting_point_x = .0
-  var starting_point_y = .0
-  val group_for_rectangles = new Group
-  var new_rectangle: Rectangle = null
-  var new_rectangle_is_being_drawn = false
-  val rectangle_colors: Array[Color] = Array(Color.TEAL, Color.TOMATO, Color.TURQUOISE, Color.VIOLET, Color.YELLOWGREEN, Color.GOLD)
-  var color_index = 0
+  var starting_point_x: Double = 0.0
+  var starting_point_y : Double = 0.0
+  var new_rectangle: JavaFXRectangle = null
+  var new_rectangle_is_being_drawn: Boolean = false
+  var isUserDrawingSelections: Boolean = false
 
-  def adjust_rectangle_properties(starting_point_x: Double, starting_point_y: Double, ending_point_x: Double, ending_point_y: Double, given_rectangle: Rectangle): Unit = {
-    given_rectangle.setX(starting_point_x)
-    given_rectangle.setY(starting_point_y)
-    given_rectangle.setWidth(ending_point_x - starting_point_x)
-    given_rectangle.setHeight(ending_point_y - starting_point_y)
-    if (given_rectangle.getWidth < 0) {
-      given_rectangle.setWidth(-given_rectangle.getWidth)
-      given_rectangle.setX(given_rectangle.getX - given_rectangle.getWidth)
-    }
-    if (given_rectangle.getHeight < 0) {
-      given_rectangle.setHeight(-given_rectangle.getHeight)
-      given_rectangle.setY(given_rectangle.getY - given_rectangle.getHeight)
+  def onMousePressed(event: MouseEvent): Unit = {
+    if (isUserDrawingSelections) {
+      if (!new_rectangle_is_being_drawn) {
+        starting_point_x = event.getX
+        starting_point_y = event.getY
+        new_rectangle = new JavaFXRectangle
+        new_rectangle.setStroke(Color.BLACK)
+        new_rectangle_is_being_drawn = true
+      }
     }
   }
 
+  def adjustRectProperties(event: MouseEvent): Unit = {
+    if (isUserDrawingSelections) {
+      if (new_rectangle_is_being_drawn) {
+        val current_ending_point_x = event.getX
+        val current_ending_point_y = event.getY
+        adjust_rectangle_properties(starting_point_x, starting_point_y, current_ending_point_x, current_ending_point_y, new_rectangle)
+      }
+    }
+  }
+
+  def setOnMouseReleased(event: MouseEvent): Option[Rectangle] = {
+    if (isUserDrawingSelections) {
+      if (new_rectangle_is_being_drawn) {
+        val x: Int = new_rectangle.getX.toInt
+        val y: Int = new_rectangle.getY.toInt
+        val height: Int = new_rectangle.getHeight.toInt
+        val width: Int = new_rectangle.getWidth.toInt
+        val rectToAdd: Rectangle = new Rectangle(new Point(x, y), new HW(height, width))
+
+        new_rectangle = null
+        new_rectangle_is_being_drawn = false
+
+        return Some(rectToAdd)
+      }
+    }
+    None
+  }
+
+  private def adjust_rectangle_properties(startingPointX: Double, startingPointY: Double, endingPointX: Double, endingPointY: Double, rect: JavaFXRectangle): Unit = {
+    rect.setX(startingPointX)
+    rect.setY(startingPointY)
+    rect.setWidth(endingPointX - startingPointX)
+    rect.setHeight(endingPointY - startingPointY)
+    if (rect.getWidth < 0) {
+      rect.setWidth(-rect.getWidth)
+      rect.setX(rect.getX - rect.getWidth)
+    }
+    if (rect.getHeight < 0) {
+      rect.setHeight(-rect.getHeight)
+      rect.setY(rect.getY - rect.getHeight)
+    }
+  }
 
 }
