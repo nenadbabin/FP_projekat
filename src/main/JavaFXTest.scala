@@ -4,10 +4,12 @@ import controller.{LayersController, SelectionDrawController, SelectionsControll
 import javafx.application.Application
 import javafx.beans.value.{ChangeListener, ObservableValue}
 import javafx.collections.{FXCollections, ObservableList}
+import javafx.embed.swing.SwingFXUtils
 import javafx.event.{ActionEvent, EventHandler}
 import javafx.geometry.{Insets, Pos}
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.{TextInputDialog, _}
+import javafx.scene.image.WritableImage
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout._
 import javafx.scene.paint.Color
@@ -17,9 +19,15 @@ import javafx.stage.{FileChooser, Stage}
 import layer.Layer
 import picture.Picture
 import selection.{BaseSelection, FlexibleSelection, Selection}
-import utility.{HW, Point, Rectangle, Utility}
+import utility.{HW, Rectangle, Utility}
+import javafx.embed.swing.SwingFXUtils
+import javafx.scene.image.WritableImage
+import javax.imageio.ImageIO
+import java.awt.image.RenderedImage
+import java.io.IOException
 
-import java.io.File
+import java.io.{File, IOException}
+import javax.imageio.ImageIO
 
 
 object JavaFXTest {
@@ -40,7 +48,6 @@ class JavaFXTest extends Application {
   val canvasOverlay = new Canvas()
 
   // Drawing rectangles for selections
-
   var drawnRectangles: List[Rectangle] = List[Rectangle]()
 
   private def setNewCanvas(pane: Pane): Unit = {
@@ -75,7 +82,7 @@ class JavaFXTest extends Application {
     val root = new Group()
 
     bPane.setCenter(canvasOverlay)
-    bPane.setTop(this.createTopPane())
+    bPane.setTop(this.createTopPane(primaryStage))
     bPane.setBottom(new TextField("Logger..."))
     bPane.setLeft(this.createLeftPane())
     bPane.setRight(this.createRightPane())
@@ -87,16 +94,18 @@ class JavaFXTest extends Application {
       selectionDrawController.onMousePressed(event)
     })
     canvasOverlay.setOnMouseDragged((event: MouseEvent) => {
-      selectionDrawController.adjustRectProperties(event)
-      clearDrawingCanvas()
-      // Draw rectangles on screen (canvas)
-      val gc = canvasOverlay.getGraphicsContext2D
-      for (r <- drawnRectangles)  {
+      if (selectionDrawController.isUserDrawingSelections) {
+        selectionDrawController.adjustRectProperties(event)
+        clearDrawingCanvas()
+        // Draw rectangles on screen (canvas)
         val gc = canvasOverlay.getGraphicsContext2D
-        gc.strokeRoundRect(r.topLeftCorner.x, r.topLeftCorner.y, r.dim.width, r.dim.height, 1, 1)
+        for (r <- drawnRectangles)  {
+          val gc = canvasOverlay.getGraphicsContext2D
+          gc.strokeRoundRect(r.topLeftCorner.x, r.topLeftCorner.y, r.dim.width, r.dim.height, 1, 1)
+        }
+        val newRect: JavaFXRectangle = selectionDrawController.new_rectangle
+        gc.strokeRoundRect(newRect.getX, newRect.getY, newRect.getWidth, newRect.getHeight, 1, 1)
       }
-      val newRect: JavaFXRectangle = selectionDrawController.new_rectangle
-      gc.strokeRoundRect(newRect.getX, newRect.getY, newRect.getWidth, newRect.getHeight, 1, 1)
     })
     canvasOverlay.setOnMouseReleased((event: MouseEvent) => {
       val rectToAdd: Rectangle = selectionDrawController.setOnMouseReleased(event) match {
@@ -530,20 +539,46 @@ class JavaFXTest extends Application {
     rightPane
   }
 
-  def createTopPane(): HBox = {
+  def createTopPane(primaryStage: Stage): HBox = {
     val topPane = new HBox()
 
     val loadProjectButton = new Button()
     loadProjectButton.setText("Load...")
     val saveProjectButton = new Button()
     saveProjectButton.setText("Save As...")
+    val exportPicButton = new Button()
+    exportPicButton.setText("Export picture")
+
+    val exportPicEvent = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        val fc = new FileChooser
+        fc.setInitialDirectory(new File("pictures"))
+        fc.getExtensionFilters.add(new FileChooser.ExtensionFilter("PNG", "*.png"))
+        fc.setTitle("Save picture")
+        val file = fc.showSaveDialog(primaryStage)
+        if (file != null) try {
+          val dims_list = for (layer <- layersController.activeLayers.reverse) yield layer.picture.dim
+          val max_dim = layersController.findMaxDimension(dims_list)
+          val canvasesForExport = layersController.drawLayers()
+          val writableImage = new WritableImage(max_dim.width, max_dim.height)
+          canvasesForExport.snapshot(null, writableImage)
+          val renderedImage = SwingFXUtils.fromFXImage(writableImage, null)
+          ImageIO.write(renderedImage, "png", file)
+        } catch {
+          case ex: IOException =>
+            ex.printStackTrace()
+        }
+      }
+    }
+    exportPicButton.setOnAction(exportPicEvent)
 
     HBox.setMargin(loadProjectButton, new Insets(20, 20, 20, 20))
     HBox.setMargin(saveProjectButton, new Insets(20, 20, 20, 0))
+    HBox.setMargin(exportPicButton, new Insets(20, 20, 20, 0))
 
     topPane.setAlignment(Pos.CENTER_LEFT)
 
-    topPane.getChildren.addAll(loadProjectButton, saveProjectButton)
+    topPane.getChildren.addAll(loadProjectButton, saveProjectButton, exportPicButton)
 
     topPane
   }

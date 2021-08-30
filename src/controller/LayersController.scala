@@ -27,7 +27,7 @@ class LayersController {
   }
 
   def drawLayers(): Pane = {
-    val dims_list: List[HW] = for (layer <- layers.reverse) yield layer.picture.dim
+    val dims_list: List[HW] = for (layer <- activeLayers.reverse) yield layer.picture.dim
 
     val max_dim = this.findMaxDimension(dims_list)
 
@@ -88,7 +88,7 @@ class LayersController {
     find(0, layers)
   }
 
-  private def findMaxDimension(list: List[HW]) = {
+  def findMaxDimension(list: List[HW]) = {
     @tailrec
     def findDim(list: List[HW], maxDim: HW): HW = list match {
       case List() => maxDim

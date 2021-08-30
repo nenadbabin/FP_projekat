@@ -25,12 +25,10 @@ class SelectionDrawController {
   }
 
   def adjustRectProperties(event: MouseEvent): Unit = {
-    if (isUserDrawingSelections) {
-      if (new_rectangle_is_being_drawn) {
-        val current_ending_point_x = event.getX
-        val current_ending_point_y = event.getY
-        adjust_rectangle_properties(starting_point_x, starting_point_y, current_ending_point_x, current_ending_point_y, new_rectangle)
-      }
+    if (new_rectangle_is_being_drawn) {
+      val current_ending_point_x = event.getX
+      val current_ending_point_y = event.getY
+      adjust_rectangle_properties(starting_point_x, starting_point_y, current_ending_point_x, current_ending_point_y, new_rectangle)
     }
   }
 

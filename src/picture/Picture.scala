@@ -131,28 +131,45 @@ class Picture (val dim: HW) {
   }
 
   def median(halfKernelSize: HW, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
-
     def medianUpTo5(five: Array[Double]): Double = {
       def order2(a: Array[Double], i: Int, j: Int): Unit = {
-        if (a(i)>a(j)) { val t = a(i); a(i) = a(j); a(j) = t }
+        if (a(i) > a(j)) {
+          val t: Double = a(i)
+          a(i) = a(j)
+          a(j) = t
+        }
       }
 
       def pairs(a: Array[Double], i: Int, j: Int, k: Int, l: Int): Double = {
-        if (a(i)<a(k)) { order2(a,j,k); a(j) }
-        else { order2(a,i,l); a(i) }
+        if (a(i) < a(k)) {
+          order2(a, j, k)
+          a(j)
+        }
+        else {
+          order2(a, i, l)
+          a(i)
+        }
       }
 
       if (five.length < 2) return five(0)
-      order2(five,0,1)
+      order2(five, 0, 1)
       if (five.length < 4) return (
-        if (five.length==2 || five(2) < five(0)) five(0)
+        if (five.length == 2 || five(2) < five(0)) five(0)
         else if (five(2) > five(1)) five(1)
         else five(2)
         )
-      order2(five,2,3)
-      if (five.length < 5) pairs(five,0,1,2,3)
-      else if (five(0) < five(2)) { order2(five,1,4); pairs(five,1,4,2,3) }
-      else { order2(five,3,4); pairs(five,0,1,3,4) }
+      order2(five, 2, 3)
+      if (five.length < 5) {
+        pairs(five, 0, 1, 2, 3)
+      }
+      else if (five(0) < five(2)) {
+        order2(five,1,4)
+        pairs(five, 1, 4, 2, 3)
+      }
+      else {
+        order2(five, 3, 4)
+        pairs(five, 0, 1, 3, 4)
+      }
     }
 
     @tailrec
