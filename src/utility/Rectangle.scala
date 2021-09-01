@@ -1,6 +1,6 @@
 package utility
 
 class Rectangle (val topLeftCorner: Point,
-                 val dim: HW) {
+                 val dim: HW) extends Serializable {
 
 }

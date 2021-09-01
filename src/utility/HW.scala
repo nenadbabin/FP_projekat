@@ -1,7 +1,7 @@
 package utility
 
 class HW (val height: Int,
-          val width: Int) {
+          val width: Int) extends Serializable {
   require(height >= 0)
   require(width >= 0)
 

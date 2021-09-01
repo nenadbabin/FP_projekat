@@ -9,6 +9,8 @@ class SelectionsController {
 
   var selections: List[BaseSelection] = List()
 
+  def selectionsNames: List[String] = for (selection <- selections.reverse) yield selection.name
+
   def addSelection(newSelection: BaseSelection): Unit = {
     def addSelectionToList(newSelection: BaseSelection): List[BaseSelection] = selections match {
       case List() => List(newSelection)
@@ -22,12 +24,12 @@ class SelectionsController {
     selections = selections.filter(_ != selectionToRemove)
   }
 
-  def findSelectionByName(name: String): BaseSelection = {
+  def findSelectionByName(name: String): Option[BaseSelection] = {
     @tailrec
-    def find(list: List[BaseSelection]): BaseSelection = list match {
-      case List() => null
+    def find(list: List[BaseSelection]): Option[BaseSelection] = list match {
+      case List() => None
       case h::t =>
-        if (h.name == name) h
+        if (h.name == name) Some(h)
         else find(t)
     }
     find(selections)

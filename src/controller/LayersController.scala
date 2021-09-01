@@ -16,6 +16,7 @@ class LayersController {
   var layers: List[Layer] = List()
 
   def activeLayers: List[Layer] = layers.filter((layer: Layer) => layer.active)
+  def layersNames: List[String] = for (layer <- layers.reverse) yield layer.name
 
   def add_layer(new_layer: Layer): Unit = {
     def add_layer_to_list(new_layer: Layer): List[Layer] = layers match {
@@ -88,7 +89,7 @@ class LayersController {
     find(0, layers)
   }
 
-  def findMaxDimension(list: List[HW]) = {
+  def findMaxDimension(list: List[HW]): HW = {
     @tailrec
     def findDim(list: List[HW], maxDim: HW): HW = list match {
       case List() => maxDim

@@ -6,7 +6,7 @@ import utility.{HW, Point, Rectangle}
 
 import scala.collection.mutable
 
-abstract class BaseSelection (val name: String) {
+abstract class BaseSelection (val name: String) extends Serializable {
 
   protected def genericNoConst(foo: (Layer, Point, HW) => Unit)
                               (layers: List[Layer])
@@ -14,7 +14,7 @@ abstract class BaseSelection (val name: String) {
                                 (const: Double, layers: List[Layer]): Unit
   protected def genericWithColor(foo: (Layer, Double, Double, Double, Point, HW) => Unit)
                                 (red: Double, green: Double, blue: Double, layers: List[Layer]): Unit
-  protected val backups: mutable.HashMap[Layer, List[Backup]] = new mutable.HashMap[Layer, List[Backup]]()
+  protected val backups: mutable.HashMap[String, List[Backup]] = new mutable.HashMap[String, List[Backup]]()
 
   def grayscale(layers: List[Layer]): (Boolean, Option[String]) = {
     genericNoConst((layer: Layer, topLeftCorner: Point, dim: HW) => {layer.grayscale(topLeftCorner, dim)})(layers)
@@ -117,9 +117,10 @@ abstract class BaseSelection (val name: String) {
     (true, None)
   }
 
-  def restore(): Unit = {
-    for ((layer: Layer, layerBackups: List[Backup]) <- backups) {
+  def restore(layers: List[Layer]): Unit = {
+    for ((layerName: String, layerBackups: List[Backup]) <- backups) {
       for (backup <- layerBackups) {
+        val layer: Layer = layers.filter(l => l.name == layerName).head
         layer.restore(new Rectangle(backup.position, backup.dim), backup.pictureExtract)
       }
     }
@@ -131,11 +132,11 @@ abstract class BaseSelection (val name: String) {
   protected def addToBackups(layer: Layer, rect: Rectangle): Unit = {
     val extractedPicture: Picture = layer.extract(rect)
     val backup: Backup = new Backup(rect.topLeftCorner, rect.dim, extractedPicture)
-    if (backups.contains(layer)) {
-      val current: List[Backup] = backups(layer)
-      backups.addOne((layer,  backup :: current))
+    if (backups.contains(layer.name)) {
+      val current: List[Backup] = backups(layer.name)
+      backups.addOne((layer.name,  backup :: current))
     } else {
-      backups.addOne((layer, List(backup)))
+      backups.addOne((layer.name, List(backup)))
     }
   }
 }

@@ -19,15 +19,13 @@ import javafx.stage.{FileChooser, Stage}
 import layer.Layer
 import picture.Picture
 import selection.{BaseSelection, FlexibleSelection, Selection}
-import utility.{HW, Rectangle, Utility}
-import javafx.embed.swing.SwingFXUtils
-import javafx.scene.image.WritableImage
-import javax.imageio.ImageIO
-import java.awt.image.RenderedImage
-import java.io.IOException
+import utility.{Rectangle, Utility}
 
-import java.io.{File, IOException}
+import java.io._
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Base64
 import javax.imageio.ImageIO
+import scala.io.{BufferedSource, Source}
 
 
 object JavaFXTest {
@@ -49,6 +47,10 @@ class JavaFXTest extends Application {
 
   // Drawing rectangles for selections
   var drawnRectangles: List[Rectangle] = List[Rectangle]()
+
+  // Options
+  val layersOptions: ObservableList[String] = FXCollections.observableArrayList()
+  val selectionsOptions: ObservableList[String] = FXCollections.observableArrayList("No selection")
 
   private def setNewCanvas(pane: Pane): Unit = {
     if (pane.getChildren.size() == 0) {
@@ -125,8 +127,7 @@ class JavaFXTest extends Application {
 
     val addLayerButton = new Button("Add layer...")
 
-    val options: ObservableList[String] = FXCollections.observableArrayList()
-    val layersComboBox = new ComboBox[String](options)
+    val layersComboBox = new ComboBox[String](layersOptions)
 
     // Add listener for creating new layer (opening picture)
     val event: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
@@ -149,7 +150,7 @@ class JavaFXTest extends Application {
           val new_layer: Layer = new Layer(picture, newFileName)
           layersController.add_layer(new_layer)
           setNewCanvas(layersController.drawLayers())
-          options.add(new_layer.name)
+          layersOptions.add(new_layer.name)
         }
       }
     }
@@ -291,7 +292,6 @@ class JavaFXTest extends Application {
 
     val addSelectionButton: Button = new Button("Add selection...")
 
-    val selectionsOptions: ObservableList[String] = FXCollections.observableArrayList("No selection")
     val selection: FlexibleSelection = new FlexibleSelection("No selection")
     selectionsController.addSelection(selection)
     val selectionsComboBox: ComboBox[String] = new ComboBox[String](selectionsOptions)
@@ -312,7 +312,7 @@ class JavaFXTest extends Application {
             // TODO: Print error to logger
             return
           }
-          if (selectionsController.findSelectionByName(selectionName) != null) {
+          if (selectionsController.findSelectionByName(selectionName).isDefined) {
             // TODO: Print error to logger
             return
           }
@@ -342,17 +342,20 @@ class JavaFXTest extends Application {
     // Change layer name event
     selectionsComboBox.valueProperty.addListener(new ChangeListener[String]() {
       override def changed(observable: ObservableValue[_ <: String], oldValue: String, newValue: String): Unit = {
-        val selection: BaseSelection = selectionsController.findSelectionByName(newValue)
-        activeSelectionName.setText(selection.name)
-        clearDrawingCanvas()
-        selection match {
-          // Draw rectangles on canvas
-          case s: Selection =>
-            val gc = canvasOverlay.getGraphicsContext2D
-            for (r <- s.rectangles) {
-              gc.strokeRoundRect(r.topLeftCorner.x, r.topLeftCorner.y, r.dim.width, r.dim.height, 1, 1)
-            }
-          case _ =>
+        val selectionOpt: Option[BaseSelection] = selectionsController.findSelectionByName(newValue)
+        if (selectionOpt.isDefined) {
+          val selection: BaseSelection = selectionOpt match {case Some(s) => s}
+          activeSelectionName.setText(selection.name)
+          clearDrawingCanvas()
+          selection match {
+            // Draw rectangles on canvas
+            case s: Selection =>
+              val gc = canvasOverlay.getGraphicsContext2D
+              for (r <- s.rectangles) {
+                gc.strokeRoundRect(r.topLeftCorner.x, r.topLeftCorner.y, r.dim.width, r.dim.height, 1, 1)
+              }
+            case _ =>
+          }
         }
       }
     })
@@ -406,10 +409,13 @@ class JavaFXTest extends Application {
     // Read color from color preview
     val colorPickerEvent = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
-        val selection: BaseSelection = selectionsController.findSelectionByName(activeSelectionName.getText)
-        val color: Color = colorPreview.getFill.asInstanceOf[Color]
-        selection.applyColor(layersController.layers, color.getRed, color.getGreen, color.getBlue)
-        setNewCanvas(layersController.drawLayers())
+        val selectionOpt: Option[BaseSelection] = selectionsController.findSelectionByName(activeSelectionName.getText)
+        if (selectionOpt.isDefined) {
+          val selection: BaseSelection = selectionOpt match {case Some(s) => s}
+          val color: Color = colorPreview.getFill.asInstanceOf[Color]
+          selection.applyColor(layersController.layers, color.getRed, color.getGreen, color.getBlue)
+          setNewCanvas(layersController.drawLayers())
+        }
       }
     }
     applyChangesButton.setOnAction(colorPickerEvent)
@@ -437,56 +443,59 @@ class JavaFXTest extends Application {
     // Apply filtering event
     val filterEvent = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
-        val selection: BaseSelection = selectionsController.findSelectionByName(activeSelectionName.getText)
-        val filterString: String = filtersComboBox.getValue
+        val selectionOpt: Option[BaseSelection] = selectionsController.findSelectionByName(activeSelectionName.getText)
+        if (selectionOpt.isDefined) {
+          val selection: BaseSelection = selectionOpt match {case Some(s) => s}
+          val filterString: String = filtersComboBox.getValue
 
-        def getValueFromTextField: Option[Double] = {
-          try {
-            val text: String = filterConstTxtFld.getText
-            Some(text.toDouble)
-          } catch {
-            case _ : NumberFormatException => None // TODO: Print error to logger
+          def getValueFromTextField: Option[Double] = {
+            try {
+              val text: String = filterConstTxtFld.getText
+              Some(text.toDouble)
+            } catch {
+              case _ : NumberFormatException => None // TODO: Print error to logger
+            }
           }
+
+          val (success, errorMessage): (Boolean, Option[String]) = filterString match {
+            case "Addition" if getValueFromTextField.isDefined
+            => selection.add(getValueFromTextField.get, layersController.activeLayers)
+            case "Subtraction" if getValueFromTextField.isDefined
+            => selection.sub(getValueFromTextField.get, layersController.activeLayers)
+            case "Inverse subtraction" if getValueFromTextField.isDefined
+            => selection.inverseSub(getValueFromTextField.get, layersController.activeLayers)
+            case "Multiplication" if getValueFromTextField.isDefined
+            => selection.mul(getValueFromTextField.get, layersController.activeLayers)
+            case "Division" if getValueFromTextField.isDefined
+            => selection.div(getValueFromTextField.get, layersController.activeLayers)
+            case "Inverse division" if getValueFromTextField.isDefined
+            => selection.inverseDiv(getValueFromTextField.get, layersController.activeLayers)
+            case "Power" if getValueFromTextField.isDefined
+            => selection.pow(getValueFromTextField.get, layersController.activeLayers)
+            case "Logarithm"
+            => selection.log(layersController.layers)
+            case "Absolute value"
+            => selection.abs(layersController.layers)
+            case "Minimum" if getValueFromTextField.isDefined
+            => selection.min(getValueFromTextField.get, layersController.activeLayers)
+            case "Maximum" if getValueFromTextField.isDefined
+            => selection.max(getValueFromTextField.get, layersController.activeLayers)
+            case "Inversion"
+            => selection.inversion(layersController.activeLayers)
+            case "Grayscale"
+            => selection.grayscale(layersController.activeLayers)
+            case "Median"
+            => selection.median(layersController.activeLayers)
+            case "Sobel"
+            => selection.sobel(layersController.activeLayers)
+            case _ => (false, Some("Error during filtering."))
+          }
+
+          // TODO: Add error message to logger
+          if (!success) println(errorMessage.get)
+
+          setNewCanvas(layersController.drawLayers())
         }
-
-       val (success, errorMessage): (Boolean, Option[String]) = filterString match {
-          case "Addition" if getValueFromTextField.isDefined
-          => selection.add(getValueFromTextField.get, layersController.activeLayers)
-          case "Subtraction" if getValueFromTextField.isDefined
-          => selection.sub(getValueFromTextField.get, layersController.activeLayers)
-          case "Inverse subtraction" if getValueFromTextField.isDefined
-          => selection.inverseSub(getValueFromTextField.get, layersController.activeLayers)
-          case "Multiplication" if getValueFromTextField.isDefined
-          => selection.mul(getValueFromTextField.get, layersController.activeLayers)
-          case "Division" if getValueFromTextField.isDefined
-          => selection.div(getValueFromTextField.get, layersController.activeLayers)
-          case "Inverse division" if getValueFromTextField.isDefined
-          => selection.inverseDiv(getValueFromTextField.get, layersController.activeLayers)
-          case "Power" if getValueFromTextField.isDefined
-          => selection.pow(getValueFromTextField.get, layersController.activeLayers)
-          case "Logarithm"
-          => selection.log(layersController.layers)
-          case "Absolute value"
-          => selection.abs(layersController.layers)
-          case "Minimum" if getValueFromTextField.isDefined
-          => selection.min(getValueFromTextField.get, layersController.activeLayers)
-          case "Maximum" if getValueFromTextField.isDefined
-          => selection.max(getValueFromTextField.get, layersController.activeLayers)
-          case "Inversion"
-          => selection.inversion(layersController.activeLayers)
-          case "Grayscale"
-          => selection.grayscale(layersController.activeLayers)
-          case "Median"
-          => selection.median(layersController.activeLayers)
-          case "Sobel"
-          => selection.sobel(layersController.activeLayers)
-          case _ => (false, Some("Error during filtering."))
-        }
-
-        // TODO: Add error message to logger
-        if (!success) println(errorMessage.get)
-
-        setNewCanvas(layersController.drawLayers())
       }
     }
     filterButton.setOnAction(filterEvent)
@@ -498,19 +507,22 @@ class JavaFXTest extends Application {
     val deleteSelectionEvent = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         val selectionName: String = activeSelectionName.getText
-        val selection: BaseSelection = selectionsController.findSelectionByName(selectionName)
-        selection match {
-          case _: Selection =>
-            // Delete selection
-            selection.restore()
-            selectionsController.removeSelection(selection)
-            selectionsOptions.remove(selectionName)
-            setNewCanvas(layersController.drawLayers())
-          case _: FlexibleSelection =>
-            // Restore selection, but don't delete it
-            selection.restore()
-            setNewCanvas(layersController.drawLayers())
-          case _ =>
+        val selectionOpt: Option[BaseSelection] = selectionsController.findSelectionByName(selectionName)
+        if (selectionOpt.isDefined) {
+          val selection: BaseSelection = selectionOpt match {case Some(s) => s}
+          selection match {
+            case _: Selection =>
+              // Delete selection
+              selection.restore(layersController.layers)
+              selectionsController.removeSelection(selection)
+              selectionsOptions.remove(selectionName)
+              setNewCanvas(layersController.drawLayers())
+            case _: FlexibleSelection =>
+              // Restore selection, but don't delete it
+              selection.restore(layersController.layers)
+              setNewCanvas(layersController.drawLayers())
+            case _ =>
+          }
         }
       }
     }
@@ -571,6 +583,79 @@ class JavaFXTest extends Application {
       }
     }
     exportPicButton.setOnAction(exportPicEvent)
+
+    val saveProjectEvent = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        def serialize(value: Any): String = {
+          val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
+          val oos = new ObjectOutputStream(stream)
+          oos.writeObject(value)
+          oos.close()
+          new String(
+            Base64.getEncoder.encode(stream.toByteArray),
+            UTF_8
+          )
+        }
+
+        val fc = new FileChooser()
+        fc.setInitialDirectory(new File("pictures"))
+        fc.getExtensionFilters.add(new FileChooser.ExtensionFilter("proj", "*.proj"))
+        fc.setTitle("Save project")
+        val file = fc.showSaveDialog(primaryStage)
+        if (file != null) try {
+          val pw = new PrintWriter(file)
+          pw.write(serialize(layersController.layers))
+          pw.write("\n")
+          pw.write(serialize(selectionsController.selections))
+          pw.close()
+        } catch {
+          case ex: IOException =>
+            ex.printStackTrace()
+        }
+      }
+    }
+    saveProjectButton.setOnAction(saveProjectEvent)
+
+    val loadProjectEvent = new EventHandler[ActionEvent]() {
+      override def handle(e: ActionEvent): Unit = {
+        def deserialize(str: String): Any = {
+          val bytes = Base64.getDecoder.decode(str.getBytes(UTF_8))
+          val ois = new ObjectInputStream(new ByteArrayInputStream(bytes))
+          val value = ois.readObject
+          ois.close()
+          value
+        }
+        val fc = new FileChooser()
+        fc.setInitialDirectory(new File("pictures"))
+        fc.getExtensionFilters.add(new FileChooser.ExtensionFilter("proj", "*.proj"))
+        fc.setTitle("Load project")
+        val file: File = fc.showOpenDialog(primaryStage)
+        if (file != null) {
+          val source: BufferedSource = Source.fromFile(file)
+          var index: Int = 0
+          for (line <- source.getLines()) {
+            index match {
+              case 0 => {
+                layersController.layers = deserialize(line).asInstanceOf[List[Layer]]
+                layersOptions.clear()
+                for (name <- layersController.layersNames) layersOptions.add(name)
+              }
+              case 1 => {
+                selectionsController.selections = deserialize(line).asInstanceOf[List[Selection]]
+                selectionsOptions.clear()
+                for (name <- selectionsController.selectionsNames) selectionsOptions.add(name)
+              }
+            }
+            index = index + 1
+          }
+          source.close()
+          setNewCanvas(layersController.drawLayers())
+        }
+      }
+    }
+    loadProjectButton.setOnAction(loadProjectEvent)
+
+
 
     HBox.setMargin(loadProjectButton, new Insets(20, 20, 20, 20))
     HBox.setMargin(saveProjectButton, new Insets(20, 20, 20, 0))

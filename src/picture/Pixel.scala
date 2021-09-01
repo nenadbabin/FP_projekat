@@ -3,7 +3,7 @@ package picture
 class Pixel (red: Double,
              green: Double,
              blue: Double,
-             checkRange: Boolean = true) {
+             checkRange: Boolean = true) extends Serializable {
 
   def this(color: Double) = this(color, color, color)
   private def checkRange(value: Double): Double = if (value < Pixel.VAL_MIN && checkRange) Pixel.VAL_MIN

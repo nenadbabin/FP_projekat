@@ -4,7 +4,7 @@ import utility.{HW, Point}
 
 import scala.annotation.tailrec
 
-class Picture (val dim: HW) {
+class Picture (val dim: HW) extends Serializable {
 //  private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(y * dim.width + x, y * dim.width + x + 1, y * dim.width + x + 2))
   private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(0))
   val pixels: Array[Array[Pixel]] = init(dim)
