@@ -73,9 +73,13 @@ abstract class BaseSelection (val name: String) extends Serializable {
   }
 
   def inverseDiv(const: Double, layers: List[Layer]): (Boolean, Option[String]) = {
-    genericWithConst((layer: Layer, const: Double, topLeftCorner: Point, dim: HW) =>
-    {layer.inverseDiv(const, topLeftCorner, dim)})(const, layers)
-    (true, None)
+    try {
+      genericWithConst((layer: Layer, const: Double, topLeftCorner: Point, dim: HW) =>
+      {layer.inverseDiv(const, topLeftCorner, dim)})(const, layers)
+      (true, None)
+    } catch {
+      case e: ArithmeticException => (false, Some(e.getMessage))
+    }
   }
 
   def pow(const: Double, layers: List[Layer]): (Boolean, Option[String]) = {
@@ -124,7 +128,7 @@ abstract class BaseSelection (val name: String) extends Serializable {
         layer.restore(new Rectangle(backup.position, backup.dim), backup.pictureExtract)
       }
     }
-    // Clearing backups is needed for FlexibleSelecion.
+    // Clearing backups is needed for FlexibleSelection.
     // Selection is deleted after calling restore, so clear is not needed.
     backups.clear()
   }

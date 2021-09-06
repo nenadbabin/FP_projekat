@@ -1,6 +1,6 @@
 package utility
 
-import picture.{Picture, Pixel, PixelValueScaler}
+import picture.Picture
 
 import java.awt.image.BufferedImage
 import java.io.File
@@ -31,16 +31,6 @@ object Utility {
       val blue = (color & 0xff)
       picture.pixels(y)(x) = PixelValueScaler.scaleFrom8BitToZeroToOne(red, green, blue)
     }
-
-//    val kernel = Array[Array[Double]](
-//      Array[Double](-1, -1, -1),
-//      Array[Double](-1, 8, -1),
-//      Array[Double](-1, -1, -1),
-//    )
-//    picture.convolution(kernel)
-
-//    picture.median(new HW(3, 3))
-
     picture
   }
 }

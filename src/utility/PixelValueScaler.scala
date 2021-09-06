@@ -1,7 +1,9 @@
-package picture
+package utility
+
+import picture.Pixel
 
 object PixelValueScaler {
-  def scaleFrom8BitToZeroToOne (red: Double, green: Double, blue: Double): Pixel = {
+  def scaleFrom8BitToZeroToOne(red: Double, green: Double, blue: Double): Pixel = {
     val oldMax: Double = 255.0
     val oldMin: Double = 0.0
     val newMax: Double = 1.0

@@ -17,12 +17,14 @@ import javafx.scene.shape.{Rectangle => JavaFXRectangle}
 import javafx.scene.{Group, Node, Scene}
 import javafx.stage.{FileChooser, Stage}
 import layer.Layer
+import main.LoggerMessageType.LoggerMessageType
 import picture.Picture
 import selection.{BaseSelection, FlexibleSelection, Selection}
 import utility.{Rectangle, Utility}
 
 import java.io._
 import java.nio.charset.StandardCharsets.UTF_8
+import java.time.LocalTime
 import java.util.Base64
 import javax.imageio.ImageIO
 import scala.io.{BufferedSource, Source}
@@ -51,6 +53,9 @@ class JavaFXTest extends Application {
   // Options
   val layersOptions: ObservableList[String] = FXCollections.observableArrayList()
   val selectionsOptions: ObservableList[String] = FXCollections.observableArrayList("No selection")
+
+  // Logger
+  val loggerField = new TextArea()
 
   private def setNewCanvas(pane: Pane): Unit = {
     if (pane.getChildren.size() == 0) {
@@ -85,7 +90,7 @@ class JavaFXTest extends Application {
 
     bPane.setCenter(canvasOverlay)
     bPane.setTop(this.createTopPane(primaryStage))
-    bPane.setBottom(new TextField("Logger..."))
+    bPane.setBottom(this.createBottomPane())
     bPane.setLeft(this.createLeftPane())
     bPane.setRight(this.createRightPane())
 
@@ -136,21 +141,22 @@ class JavaFXTest extends Application {
         fileChooser.setTitle("Open picture...")
         val stage: Stage = (e.getSource.asInstanceOf[Node]).getScene.getWindow.asInstanceOf[Stage]
         val file: File = fileChooser.showOpenDialog(stage)
-        val fileName: String = file.getName
-        val newFileName: String = {
-          // Enables layers to have the same picture, but different names
-          if (layersController.findLayerByName(fileName).isDefined) {
-            s"${fileName}_${layersController.countLayersWithSimilarNames(fileName)}"
-          } else {
-            fileName
-          }
-        }
         if (file != null) {
+          val fileName: String = file.getName
+          val newFileName: String = {
+            // Enables layers to have the same picture, but different names
+            if (layersController.findLayerByName(fileName).isDefined) {
+              s"${fileName}_${layersController.countLayersWithSimilarNames(fileName)}"
+            } else {
+              fileName
+            }
+          }
           val picture: Picture = Utility.readPictureFromFile(file)
           val new_layer: Layer = new Layer(picture, newFileName)
           layersController.add_layer(new_layer)
           setNewCanvas(layersController.drawLayers())
           layersOptions.add(new_layer.name)
+          updateLogger(s"New layer ${new_layer.name} added.", LoggerMessageType.INFO)
         }
       }
     }
@@ -201,6 +207,7 @@ class JavaFXTest extends Application {
           activeLayerName.setText(layer.name)
           if (layer.active) rb1.setSelected(true)
           else rb2.setSelected(true)
+          updateLogger(s"Layer ${layer.name} selected.", LoggerMessageType.INFO)
         }
       }
     })
@@ -209,10 +216,10 @@ class JavaFXTest extends Application {
     val applyLayerChangesEvent: EventHandler[ActionEvent] = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
         try {
-          val layerTransparency: Double = transparencyValueField.getText.toDouble
           val layerName: String = activeLayerName.getText
           val layerOpt: Option[Layer] = layersController.findLayerByName(layerName)
           if (layerOpt.isDefined) {
+            val layerTransparency: Double = transparencyValueField.getText.toDouble
             val layer: Layer = layerOpt match {case Some(l) => l}
             if (layerTransparency >= 0.0 && layerTransparency <= 1.0) {
               layer.transparency = layerTransparency
@@ -225,13 +232,17 @@ class JavaFXTest extends Application {
                   layer.active = false
                 }
               }
+              updateLogger(s"Changes to layer ${layer.name} applied.", LoggerMessageType.INFO)
               setNewCanvas(layersController.drawLayers())
             } else {
-              // TODO: Print error to logger
+              updateLogger(s"Transparency should be in range of 0 and 1. $layerTransparency found.", LoggerMessageType.ERROR)
             }
+          } else {
+            updateLogger(s"No layer selected.", LoggerMessageType.ERROR)
           }
         } catch {
-          case e : NumberFormatException => return // TODO: Print error to logger
+          case _ : NumberFormatException =>
+            updateLogger(s"Transparency value could not be parsed. Value should be type of double.", LoggerMessageType.ERROR)
         }
       }
     }
@@ -246,6 +257,7 @@ class JavaFXTest extends Application {
           val layer: Layer = layerOpt match {case Some(l) => l}
           layersController.moveLayerBackwards(layer)
           setNewCanvas(layersController.drawLayers())
+          updateLogger(s"Layer ${layer.name} moved backwards.", LoggerMessageType.INFO)
         }
       }
     }
@@ -260,6 +272,7 @@ class JavaFXTest extends Application {
           val layer: Layer = layerOpt match {case Some(l) => l}
           layersController.moveLayerForwards(layer)
           setNewCanvas(layersController.drawLayers())
+          updateLogger(s"Layer ${layer.name} moved forwards.", LoggerMessageType.INFO)
         }
       }
     }
@@ -305,15 +318,16 @@ class JavaFXTest extends Application {
     // Add new selection / Stop drawing event
     val selectionDrawingEvent = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
+        if (layersController.activeLayers.isEmpty) return
         if (!selectionDrawController.isUserDrawingSelections) {
           selectionNameDialog.showAndWait
           val selectionName: String = selectionNameDialog.getEditor.getText
           if (selectionName == "") {
-            // TODO: Print error to logger
+            updateLogger(s"Selection has to have name.", LoggerMessageType.ERROR)
             return
           }
           if (selectionsController.findSelectionByName(selectionName).isDefined) {
-            // TODO: Print error to logger
+            updateLogger(s"Selection with the name $selectionName already exists. Please choose another one.", LoggerMessageType.ERROR)
             return
           }
           addSelectionButton.setText("Finish drawing")
@@ -328,6 +342,7 @@ class JavaFXTest extends Application {
           selectionDrawController.isUserDrawingSelections = false
           drawnRectangles = List[Rectangle]()
           clearDrawingCanvas()
+          updateLogger(s"New selection ${selection.name} added.", LoggerMessageType.INFO)
         }
 
       }
@@ -346,6 +361,7 @@ class JavaFXTest extends Application {
         if (selectionOpt.isDefined) {
           val selection: BaseSelection = selectionOpt match {case Some(s) => s}
           activeSelectionName.setText(selection.name)
+          updateLogger(s"Selection ${selection.name} selected.", LoggerMessageType.INFO)
           clearDrawingCanvas()
           selection match {
             // Draw rectangles on canvas
@@ -390,10 +406,13 @@ class JavaFXTest extends Application {
               greenVal >= 0 && greenVal <= 1 &&
               blueVal >= 0 && blueVal <= 1) {
             colorPreview.setFill(new Color(redVal, greenVal, blueVal, 1))
+          } else {
+            updateLogger(s"Color values should be in range of 0 and 1.", LoggerMessageType.ERROR)
           }
 
         } catch {
-          case _ : NumberFormatException => return // TODO: Print error to logger
+          case _ : NumberFormatException =>
+            updateLogger(s"Color values could not be parsed. Values should be type of double.", LoggerMessageType.ERROR)
         }
       }
     }
@@ -415,6 +434,7 @@ class JavaFXTest extends Application {
           val color: Color = colorPreview.getFill.asInstanceOf[Color]
           selection.applyColor(layersController.layers, color.getRed, color.getGreen, color.getBlue)
           setNewCanvas(layersController.drawLayers())
+          updateLogger(s"Color applied successfully.", LoggerMessageType.INFO)
         }
       }
     }
@@ -453,7 +473,10 @@ class JavaFXTest extends Application {
               val text: String = filterConstTxtFld.getText
               Some(text.toDouble)
             } catch {
-              case _ : NumberFormatException => None // TODO: Print error to logger
+              case _ : NumberFormatException => {
+                updateLogger(s"Filtering const value could not be parsed. Value should be type of double.", LoggerMessageType.ERROR)
+                None
+              }
             }
           }
 
@@ -491,8 +514,10 @@ class JavaFXTest extends Application {
             case _ => (false, Some("Error during filtering."))
           }
 
-          // TODO: Add error message to logger
-          if (!success) println(errorMessage.get)
+          if (!success)
+            updateLogger(errorMessage.get, LoggerMessageType.ERROR)
+          else
+            updateLogger(s"Filter applied successfully.", LoggerMessageType.INFO)
 
           setNewCanvas(layersController.drawLayers())
         }
@@ -517,10 +542,12 @@ class JavaFXTest extends Application {
               selectionsController.removeSelection(selection)
               selectionsOptions.remove(selectionName)
               setNewCanvas(layersController.drawLayers())
+              updateLogger(s"Selection ${selection.name} deleted.", LoggerMessageType.INFO)
             case _: FlexibleSelection =>
               // Restore selection, but don't delete it
               selection.restore(layersController.layers)
               setNewCanvas(layersController.drawLayers())
+              updateLogger(s"Changes applied to the whole images reverted.", LoggerMessageType.INFO)
             case _ =>
           }
         }
@@ -576,6 +603,7 @@ class JavaFXTest extends Application {
           canvasesForExport.snapshot(null, writableImage)
           val renderedImage = SwingFXUtils.fromFXImage(writableImage, null)
           ImageIO.write(renderedImage, "png", file)
+          updateLogger(s"Image exported.", LoggerMessageType.INFO)
         } catch {
           case ex: IOException =>
             ex.printStackTrace()
@@ -666,5 +694,16 @@ class JavaFXTest extends Application {
     topPane.getChildren.addAll(loadProjectButton, saveProjectButton, exportPicButton)
 
     topPane
+  }
+
+  def createBottomPane(): VBox = {
+    val bottomPane: VBox = new VBox()
+    loggerField.setEditable(false)
+    bottomPane.getChildren.addAll(loggerField)
+    bottomPane
+  }
+
+  def updateLogger(text: String, loggerMessageType: LoggerMessageType): Unit = {
+    loggerField.appendText(s"${LocalTime.now()} [$loggerMessageType]: $text\n")
   }
 }

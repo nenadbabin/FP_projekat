@@ -187,7 +187,6 @@ class Picture (val dim: HW) extends Serializable {
       new Pixel(originalPixel.r, originalPixel.g, originalPixel.b)
     })
 
-
     for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
          x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
       val isRed: IndexedSeq[Double] =

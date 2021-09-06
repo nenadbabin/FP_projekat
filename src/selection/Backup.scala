@@ -5,6 +5,4 @@ import utility.{HW, Point}
 
 class Backup (val position: Point,
               val dim: HW,
-              val pictureExtract: Picture) extends Serializable {
-
-}
+              val pictureExtract: Picture) extends Serializable
