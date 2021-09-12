@@ -73,13 +73,13 @@ class LayersController {
   }
 
   def countLayersWithSimilarNames(name: String): Int = {
-    val pattern: Regex = "^.*\\.(jpg|png).*$".r
+    val pattern: Regex = ("""^""" + name + """.*$""").r
     @tailrec
     def find(count: Int, list: List[Layer]): Int = list match {
       case List() => count
       case h::t => {
         val found: Int = h.name match {
-          case pattern(c) => 1
+          case pattern() => 1
           case _ => 0
         }
         val newCount = count + found

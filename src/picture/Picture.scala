@@ -1,13 +1,13 @@
 package picture
 
-import utility.{HW, Point}
+import utility.{HW, Point, Rectangle}
 
 import scala.annotation.tailrec
 
 class Picture (val dim: HW) extends Serializable {
 //  private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(y * dim.width + x, y * dim.width + x + 1, y * dim.width + x + 2))
   private def init (dim: HW): Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => new Pixel(0))
-  val pixels: Array[Array[Pixel]] = init(dim)
+  val pixels: Array[Array[Pixel]] = init(this.dim)
 
   def add(const: Double, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
     operationOnEveryPixelWithConst(addPixel, startPoint, size)(const, checkRange)
@@ -77,13 +77,10 @@ class Picture (val dim: HW) extends Serializable {
   def convolution(kernel: Array[Array[Double]], startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
     val kernelHeight: Int = kernel.length
     val kernelWidth: Int = kernel.head.length
-    val newPixels: Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => {
-      val originalPixel = pixels(y)(x)
-      new Pixel(originalPixel.r, originalPixel.g, originalPixel.b)
-    })
+    val newPixels: Array[Array[Pixel]] = tabulatePixelCopies(this)
 
-    for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
-         x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
+    for (y <- startPoint.y until startPoint.y + size.height if y >= 0 && y < this.dim.height;
+         x <- startPoint.x until startPoint.x + size.width if x >= 0 && x < this.dim.width) {
       @tailrec
       def xIteration(currKernelY: Int, currKernelX: Int, tempColors: Pixel) : Pixel = {
         if (currKernelX == kernelWidth) {
@@ -132,43 +129,35 @@ class Picture (val dim: HW) extends Serializable {
 
   def median(halfKernelSize: HW, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
     def medianUpTo5(five: Array[Double]): Double = {
-      def order2(a: Array[Double], i: Int, j: Int): Unit = {
-        if (a(i) > a(j)) {
-          val t: Double = a(i)
-          a(i) = a(j)
-          a(j) = t
-        }
+      def oneAndOrderedPair(a: Double, smaller: Double, bigger: Double): Double =
+        if (bigger < a) bigger
+        else if (a < smaller) smaller else a
+
+      def partialOrder(a: Double, b: Double, c: Double, d: Double): (Double, Double, Double, Double) = {
+        val (s1, b1) = if (a < b) (a, b) else (b, a)
+        val (s2, b2) = if (c < d) (c, d) else (d, c)
+        (s1, b1, s2, b2)
       }
 
-      def pairs(a: Array[Double], i: Int, j: Int, k: Int, l: Int): Double = {
-        if (a(i) < a(k)) {
-          order2(a, j, k)
-          a(j)
-        }
-        else {
-          order2(a, i, l)
-          a(i)
-        }
+      def medianOf4(a: Double, b: Double, c: Double, d: Double): Double = {
+        val (s1, b1, s2, b2) = partialOrder(a, b, c, d)
+        if (b1 < b2) oneAndOrderedPair(s2, s1, b1)
+        else oneAndOrderedPair(s1, s2, b2)
       }
 
-      if (five.length < 2) return five(0)
-      order2(five, 0, 1)
-      if (five.length < 4) return (
-        if (five.length == 2 || five(2) < five(0)) five(0)
-        else if (five(2) > five(1)) five(1)
-        else five(2)
-        )
-      order2(five, 2, 3)
-      if (five.length < 5) {
-        pairs(five, 0, 1, 2, 3)
-      }
-      else if (five(0) < five(2)) {
-        order2(five,1,4)
-        pairs(five, 1, 4, 2, 3)
-      }
-      else {
-        order2(five, 3, 4)
-        pairs(five, 0, 1, 3, 4)
+      five match {
+        case Array(a) => a
+        case Array(a, b) => a min b
+        case Array(a, b, c) => {
+          if (a < b) oneAndOrderedPair(c, a, b)
+          else oneAndOrderedPair(c, b, a)
+        }
+        case Array(a, b, c, d) => medianOf4(a, b, c, d)
+        case Array(a, b, c, d, e) => {
+          val (s1, b1, s2, b2) = partialOrder(a, b, c, d)
+          if (s1 < s2) medianOf4(e, b1, s2, b2)
+          else medianOf4(e, b2, s1, b1)
+        }
       }
     }
 
@@ -179,30 +168,14 @@ class Picture (val dim: HW) extends Serializable {
       else medianOfMedians(medians)
     }
 
-    val halfKernelWidth = halfKernelSize.width
-    val halfKernelHeight = halfKernelSize.height
+    val newPixels: Array[Array[Pixel]] = tabulatePixelCopies(this)
 
-    val newPixels: Array[Array[Pixel]] = Array.tabulate(dim.height, dim.width)((y, x) => {
-      val originalPixel = pixels(y)(x)
-      new Pixel(originalPixel.r, originalPixel.g, originalPixel.b)
-    })
+    for (y <- startPoint.y until startPoint.y + size.height if y >= 0 && y < this.dim.height;
+         x <- startPoint.x until startPoint.x + size.width if x >= 0 && x < this.dim.width) {
 
-    for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
-         x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
-      val isRed: IndexedSeq[Double] =
-        for (kH <- y - halfKernelHeight to y + halfKernelHeight if kH >= 0 && kH < this.dim.height;
-             kW <- x - halfKernelWidth to x + halfKernelWidth if kW >= 0 && kW < this.dim.height)
-        yield pixels(kH)(kW).r
-
-      val isGreen: IndexedSeq[Double] =
-        for (kH <- y - halfKernelHeight to y + halfKernelHeight if kH >= 0 && kH < this.dim.height;
-             kW <- x - halfKernelWidth to x + halfKernelWidth if kW >= 0 && kW < this.dim.height)
-        yield pixels(kH)(kW).g
-
-      val isBlue: IndexedSeq[Double] =
-        for (kH <- y - halfKernelHeight to y + halfKernelHeight if kH >= 0 && kH < this.dim.height;
-             kW <- x - halfKernelWidth to x + halfKernelWidth if kW >= 0 && kW < this.dim.height)
-        yield pixels(kH)(kW).b
+      val isRed: IndexedSeq[Double] = selectChannel(pixel => pixel.r)(new Point(x, y), halfKernelSize)
+      val isGreen: IndexedSeq[Double] = selectChannel(pixel => pixel.g)(new Point(x, y), halfKernelSize)
+      val isBlue: IndexedSeq[Double] = selectChannel(pixel => pixel.b)(new Point(x, y), halfKernelSize)
 
       val arrRed: Array[Double] = isRed.toArray
       val arrGreen: Array[Double] = isGreen.toArray
@@ -220,11 +193,46 @@ class Picture (val dim: HW) extends Serializable {
   }
 
   def applyColor(startPoint: Point = new Point(0, 0), size: HW = dim, red: Double, green: Double, blue: Double, checkRange: Boolean = true): Picture = {
-    for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
-         x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
+    for (y <- startPoint.y until startPoint.y + size.height if y >= 0 && y < this.dim.height;
+         x <- startPoint.x until startPoint.x + size.width if x >= 0 && x < this.dim.width) {
       pixels(y)(x) = new Pixel(red, green, blue, checkRange)
     }
     this
+  }
+
+  def extract(rect: Rectangle): Picture = {
+    val extractedPicture: Picture = new Picture(rect.dim)
+    for (j <- 0 until rect.dim.height;
+         i <- 0 until rect.dim.width) {
+      if (rect.topLeftCorner.y + j >= 0 && rect.topLeftCorner.y + j < this.dim.height &&
+        rect.topLeftCorner.x + i >= 0 && rect.topLeftCorner.x + i < this.dim.width)
+        extractedPicture.pixels(j)(i) = pixels(rect.topLeftCorner.y + j)(rect.topLeftCorner.x + i)
+    }
+    extractedPicture
+  }
+
+  /**
+   * Returns the array of (r, g or b) channels.
+   * Point is center of the rectangle.
+   * Half-kernel is number of pixels NESW of center pixel.
+   */
+  private def selectChannel(channel: Pixel => Double)(point: Point, halfKernel: HW): IndexedSeq[Double] = {
+    val channels: IndexedSeq[Double] =
+      for (kH <- point.y - halfKernel.height to point.y + halfKernel.height if kH >= 0 && kH < this.dim.height;
+           kW <- point.x - halfKernel.width to point.x + halfKernel.width if kW >= 0 && kW < this.dim.height)
+      yield channel(pixels(kH)(kW))
+    channels
+  }
+
+  /**
+   * Returns copies of pixels.
+   */
+  private def tabulatePixelCopies(picture: Picture): Array[Array[Pixel]] = {
+    val newPixels: Array[Array[Pixel]] = Array.tabulate(picture.dim.height, picture.dim.width)((y, x) => {
+      val originalPixel = picture.pixels(y)(x)
+      new Pixel(originalPixel.r, originalPixel.g, originalPixel.b)
+    })
+    newPixels
   }
 
   private def operationOnEveryPixelWithConst (operation: (Pixel, Double, Boolean) => Pixel, startPoint: Point, size: HW)(const: Double, checkRange: Boolean = true): Unit = {
@@ -348,5 +356,4 @@ class Picture (val dim: HW) extends Serializable {
       to(y)(x) = from(y)(x)
     }
   }
-
 }

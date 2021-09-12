@@ -21,7 +21,7 @@ class SelectionsController {
   }
 
   def removeSelection(selectionToRemove: BaseSelection): Unit = {
-    selections = selections.filter(_ != selectionToRemove)
+    selections = selections.filter(_.name != selectionToRemove.name)
   }
 
   def findSelectionByName(name: String): Option[BaseSelection] = {

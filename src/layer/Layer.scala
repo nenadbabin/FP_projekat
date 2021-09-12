@@ -78,14 +78,7 @@ class Layer (val picture: Picture,
   }
 
   def extract(rect: Rectangle): Picture = {
-    val extractedPicture: Picture = new Picture(rect.dim)
-    for (j <- 0 until rect.dim.height;
-         i <- 0 until rect.dim.width) {
-      if (rect.topLeftCorner.y + j >= 0 && rect.topLeftCorner.y + j < picture.dim.height &&
-          rect.topLeftCorner.x + i >= 0 && rect.topLeftCorner.x + i < picture.dim.width)
-        extractedPicture.pixels(j)(i) = picture.pixels(rect.topLeftCorner.y + j)(rect.topLeftCorner.x + i)
-    }
-    extractedPicture
+    picture.extract(rect)
   }
 
   def restore(rect: Rectangle, backup: Picture): Unit = {
