@@ -28,9 +28,9 @@ class LayersController {
   }
 
   def drawLayers(): Pane = {
-    val dims_list: List[HW] = for (layer <- activeLayers.reverse) yield layer.picture.dim
+    val dimsList: List[HW] = for (layer <- activeLayers.reverse) yield layer.picture.dim
 
-    val max_dim = this.findMaxDimension(dims_list)
+    val maxDim = this.findMaxDimension(dimsList)
 
     val pane: Pane = new StackPane()
 
@@ -41,8 +41,8 @@ class LayersController {
 
       if (active) {
         val layerCanvas = new Canvas()
-        layerCanvas.setWidth(max_dim.width)
-        layerCanvas.setHeight(max_dim.height)
+        layerCanvas.setWidth(maxDim.width)
+        layerCanvas.setHeight(maxDim.height)
         val pixelWriter: PixelWriter = layerCanvas.getGraphicsContext2D.getPixelWriter
 
         for (y <- 0 until picture.dim.height;

@@ -111,7 +111,8 @@ class PhotoEditorApp extends Application {
           val gc = canvasOverlay.getGraphicsContext2D
           gc.strokeRoundRect(r.topLeftCorner.x, r.topLeftCorner.y, r.dim.width, r.dim.height, 1, 1)
         }
-        val newRect: JavaFXRectangle = selectionDrawController.new_rectangle
+
+        val newRect: JavaFXRectangle = selectionDrawController.rectangle
         gc.strokeRoundRect(newRect.getX, newRect.getY, newRect.getWidth, newRect.getHeight, 1, 1)
       }
     })
@@ -139,7 +140,7 @@ class PhotoEditorApp extends Application {
         val fileChooser: FileChooser = new FileChooser()
         fileChooser.setTitle("Open picture...")
         fileChooser.setInitialDirectory(new File("pictures"))
-        val stage: Stage = (e.getSource.asInstanceOf[Node]).getScene.getWindow.asInstanceOf[Stage]
+        val stage: Stage = e.getSource.asInstanceOf[Node].getScene.getWindow.asInstanceOf[Stage]
         val file: File = fileChooser.showOpenDialog(stage)
         if (file != null) {
           val fileName: String = file.getName
@@ -152,12 +153,12 @@ class PhotoEditorApp extends Application {
             }
           }
           val picture: Picture = Utility.readPictureFromFile(file)
-          val new_layer: Layer = new Layer(picture, newFileName)
-          layersController.add_layer(new_layer)
+          val newLayer: Layer = new Layer(picture, newFileName)
+          layersController.add_layer(newLayer)
           setNewCanvas(layersController.drawLayers())
           layersOptions.clear()
           for (layerName <- layersController.layersNames.reverse) layersOptions.add(layerName)
-          updateLogger(s"New layer ${new_layer.name} added.", LoggerMessageType.INFO)
+          updateLogger(s"New layer ${newLayer.name} added.", LoggerMessageType.INFO)
         }
       }
     }
@@ -601,12 +602,12 @@ class PhotoEditorApp extends Application {
         fc.setInitialDirectory(new File("pictures"))
         fc.getExtensionFilters.add(new FileChooser.ExtensionFilter("PNG", "*.png"))
         fc.setTitle("Save picture")
-        val file = fc.showSaveDialog(primaryStage)
+        val file: File = fc.showSaveDialog(primaryStage)
         if (file != null) try {
-          val dims_list = for (layer <- layersController.activeLayers.reverse) yield layer.picture.dim
-          val max_dim = layersController.findMaxDimension(dims_list)
+          val dimsList = for (layer <- layersController.activeLayers.reverse) yield layer.picture.dim
+          val maxDim = layersController.findMaxDimension(dimsList)
           val canvasesForExport = layersController.drawLayers()
-          val writableImage = new WritableImage(max_dim.width, max_dim.height)
+          val writableImage = new WritableImage(maxDim.width, maxDim.height)
           canvasesForExport.snapshot(null, writableImage)
           val renderedImage = SwingFXUtils.fromFXImage(writableImage, null)
           ImageIO.write(renderedImage, "png", file)
@@ -626,17 +627,14 @@ class PhotoEditorApp extends Application {
           val oos = new ObjectOutputStream(stream)
           oos.writeObject(value)
           oos.close()
-          new String(
-            Base64.getEncoder.encode(stream.toByteArray),
-            UTF_8
-          )
+          new String(Base64.getEncoder.encode(stream.toByteArray), UTF_8)
         }
 
-        val fc = new FileChooser()
-        fc.setInitialDirectory(new File("pictures"))
-        fc.getExtensionFilters.add(new FileChooser.ExtensionFilter("proj", "*.proj"))
-        fc.setTitle("Save project")
-        val file = fc.showSaveDialog(primaryStage)
+        val fileChooser = new FileChooser()
+        fileChooser.setInitialDirectory(new File("pictures"))
+        fileChooser.getExtensionFilters.add(new FileChooser.ExtensionFilter("proj", "*.proj"))
+        fileChooser.setTitle("Save project")
+        val file = fileChooser.showSaveDialog(primaryStage)
         if (file != null) try {
           val pw = new PrintWriter(file)
           pw.write(serialize(layersController.layers))
@@ -660,28 +658,32 @@ class PhotoEditorApp extends Application {
           ois.close()
           value
         }
-        val fc = new FileChooser()
-        fc.setInitialDirectory(new File("pictures"))
-        fc.getExtensionFilters.add(new FileChooser.ExtensionFilter("proj", "*.proj"))
-        fc.setTitle("Load project")
-        val file: File = fc.showOpenDialog(primaryStage)
+        val fileChooser = new FileChooser()
+        fileChooser.setInitialDirectory(new File("pictures"))
+        fileChooser.getExtensionFilters.add(new FileChooser.ExtensionFilter("proj", "*.proj"))
+        fileChooser.setTitle("Load project")
+        val file: File = fileChooser.showOpenDialog(primaryStage)
         if (file != null) {
           val source: BufferedSource = Source.fromFile(file)
-          var index: Int = 0
-          for (line <- source.getLines()) {
-            index match {
-              case 0 => {
-                layersController.layers = deserialize(line).asInstanceOf[List[Layer]]
-                layersOptions.clear()
-                for (name <- layersController.layersNames) layersOptions.add(name)
+          try {
+            var index: Int = 0
+            for (line <- source.getLines()) {
+              index match {
+                case 0 => {
+                  layersController.layers = deserialize(line).asInstanceOf[List[Layer]]
+                  layersOptions.clear()
+                  for (name <- layersController.layersNames) layersOptions.add(name)
+                }
+                case 1 => {
+                  selectionsController.selections = deserialize(line).asInstanceOf[List[Selection]]
+                  selectionsOptions.clear()
+                  for (name <- selectionsController.selectionsNames) selectionsOptions.add(name)
+                }
               }
-              case 1 => {
-                selectionsController.selections = deserialize(line).asInstanceOf[List[Selection]]
-                selectionsOptions.clear()
-                for (name <- selectionsController.selectionsNames) selectionsOptions.add(name)
-              }
+              index = index + 1
             }
-            index = index + 1
+          } catch {
+            case _: Throwable => updateLogger("Error while trying to import project.", LoggerMessageType.ERROR)
           }
           source.close()
           setNewCanvas(layersController.drawLayers())
@@ -689,8 +691,6 @@ class PhotoEditorApp extends Application {
       }
     }
     loadProjectButton.setOnAction(loadProjectEvent)
-
-
 
     HBox.setMargin(loadProjectButton, new Insets(20, 20, 20, 20))
     HBox.setMargin(saveProjectButton, new Insets(20, 20, 20, 0))

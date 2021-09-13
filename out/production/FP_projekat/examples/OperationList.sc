@@ -37,4 +37,4 @@ newPic1.median(new HW(1, 1), new Point(0, 0), newPic1.dim)
 
 val pic2: Picture = new Picture(new HW(4, 5))
 val newOp2: Operation = new ComposedOperation2(0.5, new Point(1, 1), pic.dim)
-val newPic2: Picture = newOp2 apply pic2
+val newPic2: Picture = newOp2 apply pic
