@@ -65,12 +65,14 @@ object Pixel {
   }
 
   def div (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
-    if (const == 0) throw new ArithmeticException("Division by 0.")
+    if (const == 0) return pixel
+//    if (const == 0) throw new ArithmeticException("Division by 0.")
     genericArithmeticOperationWithConst((x, y) => x / y)(pixel, const, checkRange)
   }
 
   def inverseDiv (pixel: Pixel, const: Double, checkRange: Boolean = true): Pixel = {
-    if (pixel.r == 0 || pixel.g == 0 || pixel.b == 0) throw new ArithmeticException("Division by 0.")
+    if (pixel.r == 0 || pixel.g == 0 || pixel.b == 0) return pixel
+//    if (pixel.r == 0 || pixel.g == 0 || pixel.b == 0) throw new ArithmeticException("Division by 0.")
     genericArithmeticOperationWithConst((x, y) => y / x)(pixel, const, checkRange)
   }
 

@@ -26,6 +26,16 @@ abstract class BaseSelection (val name: String) extends Serializable {
     (true, None)
   }
 
+  def sharpen(layers: List[Layer]): (Boolean, Option[String]) = {
+    genericNoConst((layer: Layer, topLeftCorner: Point, dim: HW) => {layer.sharpen(topLeftCorner, dim)})(layers)
+    (true, None)
+  }
+
+  def gaussianBlur(layers: List[Layer]): (Boolean, Option[String]) = {
+    genericNoConst((layer: Layer, topLeftCorner: Point, dim: HW) => {layer.gaussianBlur(topLeftCorner, dim)})(layers)
+    (true, None)
+  }
+
   def median(layers: List[Layer]): (Boolean, Option[String]) = {
     genericNoConst((layer: Layer, topLeftCorner: Point, dim: HW) => {layer.median(topLeftCorner, dim)})(layers)
     (true, None)

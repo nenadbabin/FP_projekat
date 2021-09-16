@@ -21,7 +21,7 @@ class LayersController {
   def add_layer(new_layer: Layer): Unit = {
     def add_layer_to_list(new_layer: Layer): List[Layer] = layers match {
       case List() => List(new_layer)
-      case _ => List[Layer](new_layer) ::: layers
+      case _ => new_layer :: layers
     }
 
     layers = add_layer_to_list(new_layer)
@@ -65,9 +65,8 @@ class LayersController {
     @tailrec
     def find(list: List[Layer]): Option[Layer] = list match {
       case List() => None
-      case h::t =>
-        if (h.name == name) Some(h)
-        else find(t)
+      case List(elem, _*) if elem.name == name => Some(elem)
+      case h :: t => find(t)
     }
     find(layers)
   }
@@ -93,11 +92,10 @@ class LayersController {
     @tailrec
     def findDim(list: List[HW], maxDim: HW): HW = list match {
       case List() => maxDim
-      case h :: t =>
-        if (h.height > maxDim.height && h.width > maxDim.width) findDim(list.tail, new HW(h.height, h.width))
-        else if (h.height > maxDim.height && h.width <= maxDim.width) findDim(t, new HW(h.height, maxDim.width))
-        else if (h.height <= maxDim.height && h.width > maxDim.width) findDim(t, new HW(maxDim.height, h.width))
-        else findDim(t, maxDim)
+      case h :: t if h.height > maxDim.height && h.width > maxDim.width => findDim(t, new HW(h.height, h.width))
+      case h :: t if h.height > maxDim.height && h.width <= maxDim.width => findDim(t, new HW(h.height, maxDim.width))
+      case h :: t if h.height <= maxDim.height && h.width > maxDim.width => findDim(t, new HW(maxDim.height, h.width))
+      case h :: t => findDim(t, maxDim)
     }
 
     findDim(list, new HW(0, 0))

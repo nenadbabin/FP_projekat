@@ -118,9 +118,9 @@ class Picture (val dim: HW) extends Serializable {
       val newRed: Double = newColor.r
       val newGreen: Double = newColor.g
       val newBlue: Double = newColor.b
-      newPixels(y)(x) = new Pixel(newRed / (kernelHeight * kernelWidth),
-                                  newGreen / (kernelHeight * kernelWidth),
-                                  newBlue / (kernelHeight * kernelWidth),
+      newPixels(y)(x) = new Pixel(newRed /* / (kernelHeight * kernelWidth) */,
+                                  newGreen /* / (kernelHeight * kernelWidth) */,
+                                  newBlue /* / (kernelHeight * kernelWidth) */,
                                   checkRange)
     }
     overwrite(newPixels, pixels)
@@ -219,7 +219,7 @@ class Picture (val dim: HW) extends Serializable {
   private def selectChannel(channel: Pixel => Double)(point: Point, halfKernel: HW): IndexedSeq[Double] = {
     val channels: IndexedSeq[Double] =
       for (kH <- point.y - halfKernel.height to point.y + halfKernel.height if kH >= 0 && kH < this.dim.height;
-           kW <- point.x - halfKernel.width to point.x + halfKernel.width if kW >= 0 && kW < this.dim.height)
+           kW <- point.x - halfKernel.width to point.x + halfKernel.width if kW >= 0 && kW < this.dim.width)
       yield channel(pixels(kH)(kW))
     channels
   }

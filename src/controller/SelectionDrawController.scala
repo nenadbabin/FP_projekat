@@ -18,15 +18,16 @@ class SelectionDrawController {
       startingPointX = event.getX
       startingPointY = event.getY
       newRectangle = Some(new JavaFXRectangle)
-      rectangle.setStroke(Color.CORAL)
       isNewRectangleBeingDrawn = true
     }
   }
 
-  def adjustRectProperties(event: MouseEvent): Unit = {
+  def adjustRectProperties(event: MouseEvent, canvasHeight: Double, canvasWidth: Double): Unit = {
     if (isUserDrawingSelections && isNewRectangleBeingDrawn) {
-      val currentEndingPointX = event.getX
-      val currentEndingPointY = event.getY
+      def max (a: Double, b: Double): Double = if (b > a) b else a
+      def min (a: Double, b: Double): Double = if (a > b) b else a
+      val currentEndingPointX = min(max(event.getX, 0), canvasWidth)
+      val currentEndingPointY = min(max(event.getY, 0), canvasHeight)
       adjustRectangleProperties(startingPointX, startingPointY, currentEndingPointX, currentEndingPointY)
     }
   }
