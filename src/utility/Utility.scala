@@ -23,9 +23,9 @@ object Utility {
 
     val picture: Picture = new Picture(new HW(h, w))
 
-    for (x <- 0 until w;
-         y <- 0 until h) {
-      val color = img.getRGB(w - x - 1, y)
+    for (y <- 0 until h;
+         x <- 0 until w) {
+      val color = img.getRGB(x, y)
       val red = (color & 0xff0000) / 65536
       val green = (color & 0xff00) / 256
       val blue = (color & 0xff)

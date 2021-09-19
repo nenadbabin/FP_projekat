@@ -71,6 +71,28 @@ class LayersController {
     find(layers)
   }
 
+  private def changeLayer(layerOp: (Layer, AnyVal) => Layer)(name: String, feature: AnyVal): List[Layer] = {
+    @tailrec
+    def change(list: List[Layer], newList: List[Layer]): List[Layer] = list match {
+      case List() => newList
+      case h :: t if h.name == name => {
+        val newElem: Layer = layerOp(h, feature)
+        val list: List[Layer] = newList :+ newElem
+        change(t, list)
+      }
+      case h :: t => change(t, newList :+ h)
+    }
+    change(layers, List[Layer]())
+  }
+
+  def changeLayerTransparency(name: String, transparency: Double): Unit = {
+    layers = changeLayer((h, tr) => h.copy(transparency = tr.asInstanceOf[Double]))(name, transparency)
+  }
+
+  def changeLayerActive(name: String, active: Boolean): Unit = {
+    layers = changeLayer((h, ac) => h.copy(active = ac.asInstanceOf[Boolean]))(name, active)
+  }
+
   def countLayersWithSimilarNames(name: String): Int = {
     val pattern: Regex = ("""^""" + name + """.*$""").r
     @tailrec

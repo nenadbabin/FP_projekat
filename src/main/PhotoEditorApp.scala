@@ -28,7 +28,6 @@ import java.time.LocalTime
 import java.util.Base64
 import javax.imageio.ImageIO
 import scala.io.{BufferedSource, Source}
-import scala.util.Using
 
 
 object PhotoEditorApp {
@@ -155,7 +154,7 @@ class PhotoEditorApp extends Application {
             }
           }
           val picture: Picture = Utility.readPictureFromFile(file)
-          val newLayer: Layer = new Layer(picture, newFileName)
+          val newLayer: Layer = Layer(picture, newFileName)
           layersController.add_layer(newLayer)
           setNewCanvas(layersController.drawLayers())
           layersOptions.clear()
@@ -211,7 +210,7 @@ class PhotoEditorApp extends Application {
           activeLayerName.setText(layer.name)
           if (layer.active) rb1.setSelected(true)
           else rb2.setSelected(true)
-          updateLogger(s"Layer ${layer.name} selected.", LoggerMessageType.INFO)
+          // updateLogger(s"Layer ${layer.name} selected.", LoggerMessageType.INFO)
         }
       }
     })
@@ -226,14 +225,14 @@ class PhotoEditorApp extends Application {
             val layerTransparency: Double = transparencyValueField.getText.toDouble
             val layer: Layer = layerOpt match {case Some(l) => l}
             if (layerTransparency >= 0.0 && layerTransparency <= 1.0) {
-              layer.transparency = layerTransparency
+              layersController.changeLayerTransparency(layerName, layerTransparency)
               if (group.getSelectedToggle != null) {
                 val toggleString: String = group.getSelectedToggle.asInstanceOf[RadioButton].getText
                 if (toggleString == "Yes") {
-                  layer.active = true
+                  layersController.changeLayerActive(layerName, active = true)
                 }
                 if (toggleString == "No") {
-                  layer.active = false
+                  layersController.changeLayerActive(layerName, active = false)
                 }
               }
               updateLogger(s"Changes to layer ${layer.name} applied.", LoggerMessageType.INFO)
@@ -597,9 +596,9 @@ class PhotoEditorApp extends Application {
     val topPane = new HBox()
 
     val loadProjectButton = new Button()
-    loadProjectButton.setText("Load...")
+    loadProjectButton.setText("Load project...")
     val saveProjectButton = new Button()
-    saveProjectButton.setText("Save As...")
+    saveProjectButton.setText("Save project as...")
     val exportPicButton = new Button()
     exportPicButton.setText("Export picture")
 
@@ -611,18 +610,19 @@ class PhotoEditorApp extends Application {
                                                new FileChooser.ExtensionFilter("JPG", "*.jpg"))
         fileChooser.setTitle("Save picture")
         val file: File = fileChooser.showSaveDialog(primaryStage)
-        if (file != null) try {
-          val dimsList = for (layer <- layersController.activeLayers.reverse) yield layer.picture.dim
-          val maxDim = layersController.findMaxDimension(dimsList)
-          val canvasesForExport = layersController.drawLayers()
-          val writableImage = new WritableImage(maxDim.width, maxDim.height)
-          canvasesForExport.snapshot(null, writableImage)
-          val renderedImage = SwingFXUtils.fromFXImage(writableImage, null)
-          ImageIO.write(renderedImage, "png", file)
-          updateLogger(s"Image exported.", LoggerMessageType.INFO)
-        } catch {
-          case ex: IOException =>
-            ex.printStackTrace()
+        if (file != null) {
+          try {
+            val dimsList = for (layer <- layersController.activeLayers.reverse) yield layer.picture.dim
+            val maxDim = layersController.findMaxDimension(dimsList)
+            val canvasesForExport = layersController.drawLayers()
+            val writableImage = new WritableImage(maxDim.width, maxDim.height)
+            canvasesForExport.snapshot(null, writableImage)
+            val renderedImage = SwingFXUtils.fromFXImage(writableImage, null)
+            ImageIO.write(renderedImage, "png", file)
+            updateLogger(s"Image exported.", LoggerMessageType.INFO)
+          } catch {
+            case e: Throwable => updateLogger(e.getMessage, LoggerMessageType.ERROR)
+          }
         }
       }
     }
@@ -643,15 +643,17 @@ class PhotoEditorApp extends Application {
         fileChooser.getExtensionFilters.add(new FileChooser.ExtensionFilter("proj", "*.proj"))
         fileChooser.setTitle("Save project")
         val file = fileChooser.showSaveDialog(primaryStage)
-        if (file != null) try {
-          Using(new PrintWriter(file)) {
-            pw =>
-              pw.write(serialize(layersController.layers))
-              pw.write("\n")
-              pw.write(serialize(selectionsController.selections))
+        if (file != null) {
+          val pw: PrintWriter = new PrintWriter(file)
+          try {
+            pw.write(serialize(layersController.layers))
+            pw.write("\n")
+            pw.write(serialize(selectionsController.selections))
+          } catch {
+            case e: Throwable => updateLogger(e.getMessage, LoggerMessageType.ERROR)
+          } finally {
+            pw.close()
           }
-        } catch {
-          case e: Throwable => updateLogger(e.getMessage, LoggerMessageType.ERROR)
         }
       }
     }
@@ -659,13 +661,11 @@ class PhotoEditorApp extends Application {
 
     val loadProjectEvent = new EventHandler[ActionEvent]() {
       override def handle(e: ActionEvent): Unit = {
-        def deserialize(str: String): AnyRef = {
+        def deserialize(str: String): Any = {
           val bytes = Base64.getDecoder.decode(str.getBytes(UTF_8))
-          Using(new ObjectInputStream(new ByteArrayInputStream(bytes))) {
-            ois =>
-              val value = ois.readObject
-              return value
-          }
+          val ois = new ObjectInputStream(new ByteArrayInputStream(bytes))
+          val value = ois.readObject
+          value
         }
 
         val fileChooser = new FileChooser()
@@ -695,8 +695,9 @@ class PhotoEditorApp extends Application {
             updateLogger(s"Project loaded.", LoggerMessageType.INFO)
           } catch {
             case e: Throwable => updateLogger(s"Error while trying to import project. ${e.getMessage}", LoggerMessageType.ERROR)
+          } finally {
+            source.close()
           }
-          source.close()
           setNewCanvas(layersController.drawLayers())
         }
       }

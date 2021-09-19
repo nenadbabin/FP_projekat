@@ -3,10 +3,10 @@ package layer
 import picture.Picture
 import utility.{HW, Point, Rectangle}
 
-class Layer (val picture: Picture,
-             val name: String,
-             var transparency: Double = 1,
-             var active: Boolean = true) extends Serializable {
+case class Layer (picture: Picture,
+                  name: String,
+                  transparency: Double = 1,
+                  active: Boolean = true) {
 
   def grayscale(startPoint: Point = new Point(0, 0), size: HW = picture.dim): Unit = {
     picture.grayscale(startPoint, size)
