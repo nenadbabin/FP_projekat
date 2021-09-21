@@ -1,7 +1,6 @@
 package controller
 
 import javafx.scene.input.MouseEvent
-import javafx.scene.paint.Color
 import javafx.scene.shape.{Rectangle => JavaFXRectangle}
 import utility.{HW, Point, Rectangle}
 
@@ -9,7 +8,10 @@ class SelectionDrawController {
   var startingPointX: Double = 0.0
   var startingPointY : Double = 0.0
   var newRectangle: Option[JavaFXRectangle] = None
-  def rectangle: JavaFXRectangle = newRectangle match {case Some(nr) => nr}
+  def rectangle: JavaFXRectangle = newRectangle match {
+    case Some(nr) => nr
+    case None => throw new RuntimeException("Rectangle should exist.")
+  }
   var isNewRectangleBeingDrawn: Boolean = false
   var isUserDrawingSelections: Boolean = false
 

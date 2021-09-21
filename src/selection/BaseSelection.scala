@@ -113,7 +113,6 @@ abstract class BaseSelection (val name: String) extends Serializable {
   }
 
   def log(layers: List[Layer]): (Boolean, Option[String]) = {
-    // TODO: Should there be some condition?
     genericNoConst((layer: Layer, topLeftCorner: Point, dim: HW) =>
     {layer.log(topLeftCorner, dim)})(layers)
     (true, None)

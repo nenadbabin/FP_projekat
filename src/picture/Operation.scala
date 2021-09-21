@@ -8,8 +8,8 @@ abstract class Operation(val startPoint: Point,
   def apply(picture: Picture): Picture
 
   protected def performPixelValuesCheck(op: Option[Operation]): Boolean = op match {
-    case Some(_) => true
-    case None => false
+    case Some(_) => false
+    case None => true
   }
 
   protected def callNextIfExistsOrReturnResult(result: Picture, next: Option[Operation]): Picture = next match {

@@ -30,7 +30,7 @@ class ComposedOperation2 (val const: Double,
 
 val pic1: Picture = new Picture(new HW(4, 5))
 val newOp: Operation = new ComposedOperation(0.5, new Point(1, 1), pic.dim,
-                       Some(new Add(0.2, new Point(0, 0), pic.dim)))
+                  Some(new Add(0.2, new Point(0, 0), pic.dim)))
 val newPic1: Picture = newOp apply pic1
 newPic1.median(new HW(1, 1), new Point(0, 0), newPic1.dim)
 

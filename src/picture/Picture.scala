@@ -94,12 +94,12 @@ class Picture (val dim: HW) extends Serializable {
             val newGreen: Double = tempColors.g + tmpPixel.g * kernel(currKernelY)(currKernelX)
             val newBlue: Double = tempColors.b + tmpPixel.b * kernel(currKernelY)(currKernelX)
             xIteration(currKernelY,
-              currKernelX + 1,
-              new Pixel(newRed, newGreen, newBlue, false))
+                       currKernelX + 1,
+                       new Pixel(newRed, newGreen, newBlue, false))
           } else {
             xIteration(currKernelY,
-              currKernelX + 1,
-              tempColors)
+                       currKernelX + 1,
+                       tempColors)
           }
         }
       }
@@ -129,9 +129,9 @@ class Picture (val dim: HW) extends Serializable {
 
   def median (halfKernelSize: HW, startPoint: Point = new Point(0, 0), size: HW = dim, checkRange: Boolean = true): Picture = {
     def medianUpTo5(five: Array[Double]): Double = {
-      def oneAndOrderedPair(a: Double, smaller: Double, bigger: Double): Double =
-        if (bigger < a) bigger
-        else if (a < smaller) smaller else a
+      def oneAndOrderedPair(pivot: Double, smaller: Double, bigger: Double): Double =
+        if (bigger < pivot) bigger
+        else if (pivot < smaller) smaller else pivot
 
       def partialOrder(a: Double, b: Double, c: Double, d: Double): (Double, Double, Double, Double) = {
         val (s1, b1) = if (a < b) (a, b) else (b, a)
@@ -164,7 +164,7 @@ class Picture (val dim: HW) extends Serializable {
     @tailrec
     def medianOfMedians(arr: Array[Double]): Double = {
       val medians: Array[Double] = arr.grouped(5).map(medianUpTo5).toArray
-      if (medians.length <= 5) medianUpTo5 (medians)
+      if (medians.length <= 5) medianUpTo5(medians)
       else medianOfMedians(medians)
     }
 
@@ -236,15 +236,15 @@ class Picture (val dim: HW) extends Serializable {
   }
 
   private def operationOnEveryPixelWithConst (operation: (Pixel, Double, Boolean) => Pixel, startPoint: Point, size: HW)(const: Double, checkRange: Boolean = true): Unit = {
-    for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
-         x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
+    for (y <- startPoint.y until startPoint.y + size.height if y >= 0 && y < this.dim.height;
+         x <- startPoint.x until startPoint.x + size.width if x >= 0 && x < this.dim.width) {
       pixels(y)(x) = operation(pixels(y)(x), const, checkRange)
     }
   }
 
   private def operationOnEveryPixelNoConst (operation: (Pixel, Boolean) => Pixel, startPoint: Point, size: HW, checkRange: Boolean = true): Unit = {
-    for (y <- startPoint.y until startPoint.y + size.height if y < this.dim.height;
-         x <- startPoint.x until startPoint.x + size.width if x < this.dim.width) {
+    for (y <- startPoint.y until startPoint.y + size.height if y >= 0 && y < this.dim.height;
+         x <- startPoint.x until startPoint.x + size.width if x >= 0 && x < this.dim.width) {
       pixels(y)(x) = operation(pixels(y)(x), checkRange)
     }
   }
