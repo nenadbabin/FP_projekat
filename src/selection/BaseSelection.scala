@@ -147,9 +147,9 @@ abstract class BaseSelection (val name: String) extends Serializable {
     val backup: Backup = new Backup(rect.topLeftCorner, rect.dim, extractedPicture)
     if (backups.contains(layer.name)) {
       val current: List[Backup] = backups(layer.name)
-      backups.addOne((layer.name,  backup :: current))
+      backups += ((layer.name,  backup :: current))
     } else {
-      backups.addOne((layer.name, List(backup)))
+      backups += ((layer.name, List(backup)))
     }
   }
 }
